@@ -2,8 +2,8 @@
 
 An AI Image and Video Generation Playground powered by [HyprLab](https://hyprlab.io/). Built with React, TypeScript, and Tailwind CSS.
 
-[![Hypr Studio Light Mode](https://placehold.co/600x400)](https://placehold.co/1200x800)
-[![Hypr Studio Dark Mode](https://placehold.co/600x400)](https://placehold.co/1200x800)
+[![Hypr Studio Light Mode](https://raw.githubusercontent.com/HyprLabAI/hypr-studio/refs/heads/main/screenshot/hypr_studio_lightmode.jpeg)](https://raw.githubusercontent.com/HyprLabAI/hypr-studio/refs/heads/main/screenshot/hypr_studio_lightmode.jpeg)
+[![Hypr Studio Dark Mode](https://raw.githubusercontent.com/HyprLabAI/hypr-studio/refs/heads/main/screenshot/hypr_studio_darkmode.jpeg)](https://raw.githubusercontent.com/HyprLabAI/hypr-studio/refs/heads/main/screenshot/hypr_studio_darkmode.jpeg)
 
 ## Overview
 
