@@ -761,6 +761,30 @@ export const modelFamilies: ModelFamily[] = [
     ],
   },
   {
+    id: "grok",
+    name: "x.AI",
+    description: "x.AI image generation models",
+    type: "image",
+    models: [
+      {
+        id: "grok",
+        name: "Grok",
+        description: "Grok models",
+        fields: [
+          {
+            name: "model",
+            type: "select",
+            label: "Model Version",
+            required: true,
+            options: ["grok-2-image"],
+            default: "grok-2-image",
+          },
+          { name: "prompt", type: "textarea", label: "Prompt", required: true },
+        ],
+      },
+    ],
+  },
+  {
     id: "kling",
     name: "Kling",
     description: "Kling video generation models",
