@@ -55,7 +55,15 @@ export const modelValidations = {
   "gpt-image-1": z.object({
     ...baseValidation,
     model: z.literal("gpt-image-1"),
-    image: z.string().url().optional(),
+    image: z
+      .union([
+        z.string().url("Image must be a valid URL."),
+        z
+          .array(z.string().url("Each image in the array must be a valid URL."))
+          .min(1, "At least one image URL is required in the array.")
+          .max(4),
+      ])
+      .optional(),
     mask: z.string().url().optional(),
     background: z
       .enum(["auto", "transparent", "opaque"])
@@ -800,7 +808,7 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Model Version",
             required: true,
-            options: ["kling-v1.6-standard"],
+            options: ["kling-v1.6-pro", "kling-v1.6-standard"],
             default: "kling-v1.6-standard",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },

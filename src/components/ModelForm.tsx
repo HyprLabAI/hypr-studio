@@ -17,46 +17,54 @@ const ModelForm: React.FC<ModelFormProps> = ({
   apiKey,
   onUploadError,
 }) => {
-  const modelConfig = modelFamilies
+  const modelConfigBlock = modelFamilies
     .flatMap((family) => family.models)
     .find(
-      (model) =>
-        model.id === modelId ||
-        model.fields.some(
+      (block) =>
+        block.id === modelId ||
+        block.fields.some(
           (field) =>
-            field.type === "select" &&
             field.name === "model" &&
+            field.type === "select" &&
             field.options?.includes(modelId),
         ),
     );
 
-  if (!modelConfig) {
-    console.error(`ModelForm: Could not find config for modelId: ${modelId}`);
-    return <div>Error: Model configuration not found for {modelId}.</div>;
+  if (!modelConfigBlock) {
+    console.error(
+      `ModelForm Critical Error: Could not find configuration block defining fields for specific model ID: ${modelId}. Check models.ts structure.`,
+    );
+    return (
+      <div>Error: Cannot find form configuration for model '{modelId}'.</div>
+    );
   }
 
+  const currentSpecificModel = values.model || modelId;
+
   useEffect(() => {
-    modelConfig.fields.forEach((field) => {
+    modelConfigBlock.fields.forEach((field) => {
+      const shouldShow =
+        !field.showFor || field.showFor.includes(currentSpecificModel);
+
       if (
+        shouldShow &&
         field.default !== undefined &&
-        values[field.name] === undefined &&
-        (!field.showFor || field.showFor.includes(modelId))
+        values[field.name] === undefined
       ) {
         onChange(field.name, field.default);
       }
     });
-  }, [modelConfig, modelId, onChange]);
+  }, [modelConfigBlock, currentSpecificModel, onChange, values]);
 
   const getVisibleFields = () => {
-    const currentSpecificModel = values.model || modelId;
-    return modelConfig.fields.filter((field) => {
+    return modelConfigBlock.fields.filter((field) => {
       return !field.showFor || field.showFor.includes(currentSpecificModel);
     });
   };
 
   const renderField = (field: Field) => {
     const value = values[field.name] ?? field.default ?? "";
-    const uniqueId = `${field.name}-${modelId}-${field.showFor?.join("-") || "all"}`;
+    const uniqueId = `${field.name}-${currentSpecificModel}-${field.showFor?.join("-") || "all"}`;
     const baseInputClasses =
       "block w-full border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 rounded-md";
     const lightModeVisibilityClasses = "bg-gray-100 placeholder-gray-400";
@@ -70,7 +78,7 @@ const ModelForm: React.FC<ModelFormProps> = ({
             value={value}
             onChange={(e) => onChange(field.name, e.target.value)}
             required={field.required}
-            className={`${baseInputClasses} ${lightModeVisibilityClasses}`}
+            className={`${baseInputClasses} ${lightModeVisibilityClasses} min-h-[60px]`}
             placeholder={field.label}
             rows={3}
           />
@@ -86,11 +94,13 @@ const ModelForm: React.FC<ModelFormProps> = ({
             required={field.required}
             className={`${baseInputClasses} ${lightModeVisibilityClasses}`}
           >
-            {!field.required && field.default === undefined && (
-              <option value="">-- Select --</option>
+            {!field.required && field.default === undefined && !value && (
+              <option value="" disabled>
+                -- Select {field.label} --
+              </option>
             )}
             {field.options?.map((option) => (
-              <option key={option} value={option}>
+              <option key={String(option)} value={option}>
                 {String(option)
                   .replace(/_/g, " ")
                   .replace(/^./, (c) => c.toUpperCase())}
@@ -100,13 +110,17 @@ const ModelForm: React.FC<ModelFormProps> = ({
         );
 
       case "range":
+        const rangeValue = Number(value);
+        const displayValue = !isNaN(rangeValue)
+          ? rangeValue
+          : (field.default ?? field.min ?? 0);
         return (
           <div className="flex items-center gap-2">
             <input
               type="range"
               id={uniqueId}
               name={field.name}
-              value={value}
+              value={displayValue}
               onChange={(e) => onChange(field.name, Number(e.target.value))}
               min={field.min}
               max={field.max}
@@ -114,14 +128,14 @@ const ModelForm: React.FC<ModelFormProps> = ({
               className="flex-grow h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
             />
             <span className="text-sm text-gray-500 w-12 text-right tabular-nums">
-              {value}
+              {displayValue}
             </span>
           </div>
         );
 
       case "checkbox":
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-1">
             <input
               type="checkbox"
               id={uniqueId}
@@ -132,10 +146,10 @@ const ModelForm: React.FC<ModelFormProps> = ({
             />
             <label
               htmlFor={uniqueId}
-              className="text-sm font-medium text-gray-700"
+              className="text-sm font-medium text-gray-700 cursor-pointer"
             >
               {field.label}
-              {field.required && <span className="text-red-500">*</span>}
+              {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
           </div>
         );
@@ -161,26 +175,34 @@ const ModelForm: React.FC<ModelFormProps> = ({
             placeholder={field.label}
           />
         );
-
       case "file":
         const fileType =
           field.name.includes("video") || field.name.includes("vid")
             ? "video"
             : "image";
+        const allowMultiple =
+          field.name === "image" && currentSpecificModel === "gpt-image-1";
+        const uploadError = values[`${field.name}_error`];
+
         return (
-          <FileUpload
-            apiKey={apiKey}
-            fileType={fileType}
-            initialUrl={typeof value === "string" ? value : undefined}
-            onUploadComplete={(url) => {
-              onChange(field.name, url);
-            }}
-            onError={(errorMsg) => {
-              console.error(`Upload error for ${field.name}:`, errorMsg);
-              onUploadError?.(field.name, errorMsg);
-              onChange(field.name, undefined);
-            }}
-          />
+          <div>
+            <FileUpload
+              apiKey={apiKey}
+              fileType={fileType}
+              initialValue={value as string | string[] | undefined}
+              allowMultiple={allowMultiple}
+              onUploadComplete={(uploadedValue) => {
+                onChange(field.name, uploadedValue);
+              }}
+              onError={(errorMsg) => {
+                onUploadError?.(field.name, errorMsg);
+              }}
+            />
+            {}
+            {uploadError && (
+              <p className="mt-1 text-xs text-red-500">{uploadError}</p>
+            )}
+          </div>
         );
 
       default:
@@ -202,12 +224,10 @@ const ModelForm: React.FC<ModelFormProps> = ({
   return (
     <div className="space-y-4">
       {getVisibleFields().map((field) => (
-        <div
-          key={`${field.name}-${modelId}-${field.showFor?.join("-") || "all"}`}
-        >
+        <div key={`${field.name}-${currentSpecificModel}`}>
           {field.type !== "checkbox" && (
             <label
-              htmlFor={`${field.name}-${modelId}-${field.showFor?.join("-") || "all"}`}
+              htmlFor={`${field.name}-${currentSpecificModel}-${field.showFor?.join("-") || "all"}`}
               className="block text-sm font-medium text-gray-700 mb-1"
             >
               {field.label}

@@ -4,7 +4,12 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { Settings, Loader, Image as ImageIcon } from "lucide-react";
+import {
+  Settings,
+  Loader,
+  Image as ImageIcon,
+  AlertCircle,
+} from "lucide-react";
 import { GeneratedImage } from "../types";
 import ModelTabs from "./ModelTabs";
 import ModelForm from "./ModelForm";
@@ -21,24 +26,37 @@ const findDefaultImageModel = (): string => {
     if (modelSelectField?.default) return modelSelectField.default as string;
     if (modelSelectField?.options?.[0])
       return modelSelectField.options[0] as string;
-    if (firstModelConfig?.id) {
-      if (
-        modelSelectField &&
-        modelSelectField.options?.includes(firstModelConfig.id)
-      )
-        return firstModelConfig.id;
-      if (!modelSelectField) return firstModelConfig.id;
-    }
+    if (firstModelConfig?.id && !modelSelectField) return firstModelConfig.id;
   }
-  console.warn("No default image model found. Falling back to 'flux-1.1-pro'.");
-  return "flux-1.1-pro";
+  console.warn("No default image model found. Falling back to 'gpt-image-1'.");
+  return "gpt-image-1";
 };
 const defaultImageModel = findDefaultImageModel();
+
+const findModelConfigBlockContainingModel = (
+  specificModelId: string,
+): ModelConfig | null => {
+  for (const family of modelFamilies) {
+    if (family.type === "image") {
+      const foundConfigBlock = family.models.find(
+        (block) =>
+          block.id === specificModelId ||
+          block.fields.some(
+            (field) =>
+              field.name === "model" &&
+              field.type === "select" &&
+              field.options?.includes(specificModelId),
+          ),
+      );
+      if (foundConfigBlock) return foundConfigBlock;
+    }
+  }
+  return null;
+};
 
 interface ImageGeneratorProps {
   onImageGenerated: (image: GeneratedImage) => void;
 }
-
 export interface ImageGeneratorRef {
   loadSettings: (settings: GeneratedImage["settings"]) => void;
 }
@@ -49,7 +67,12 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
       localStorage.getItem("hyprFluxApiKey") || "",
     );
     const [selectedModel, setSelectedModel] = useState<string>(() => {
-      return defaultImageModel;
+      const lastImageModel = localStorage.getItem(
+        "hyprFluxLastSelectedImageModel",
+      );
+      const isValid =
+        lastImageModel && !!findModelConfigBlockContainingModel(lastImageModel);
+      return isValid ? lastImageModel : defaultImageModel;
     });
     const [formValues, setFormValues] = useState<Record<string, any>>({});
     const [isLoading, setIsLoading] = useState(false);
@@ -58,58 +81,46 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
       {},
     );
 
-    const findImageModelConfig = (modelId: string): ModelConfig | null => {
-      for (const family of modelFamilies) {
-        if (family.type === "image") {
-          for (const model of family.models) {
-            if (
-              model.id === modelId ||
-              model.fields.some(
-                (f) =>
-                  f.name === "model" &&
-                  f.type === "select" &&
-                  f.options?.includes(modelId),
-              )
-            ) {
-              return model;
-            }
-          }
-        }
-      }
-      return null;
-    };
-
     useEffect(() => {
-      const modelConfig = findImageModelConfig(selectedModel);
-      if (!modelConfig) {
-        console.warn(`ImageGenerator: ${selectedModel} invalid. Resetting.`);
+      const modelConfigBlock =
+        findModelConfigBlockContainingModel(selectedModel);
+      if (!modelConfigBlock) {
+        console.error(
+          `Cannot load/initialize: No config block found for ${selectedModel}. Resetting.`,
+        );
         setSelectedModel(defaultImageModel);
         return;
       }
-      const savedValues = localStorage.getItem(`hyprFlux_${selectedModel}`);
+      const storageKey = `hyprFlux_${selectedModel}`;
+      const savedValues = localStorage.getItem(storageKey);
       if (savedValues) {
         try {
           const parsedValues = JSON.parse(savedValues);
-          setFormValues({ ...parsedValues, model: selectedModel });
+          if (!parsedValues.model || parsedValues.model !== selectedModel) {
+            parsedValues.model = selectedModel;
+          }
+          setFormValues(parsedValues);
         } catch (e) {
-          console.error(`Parse error ${selectedModel}:`, e);
-          initializeDefaults(selectedModel);
+          console.error(`Error parsing ${selectedModel} values:`, e);
+          initializeDefaults(selectedModel, modelConfigBlock);
         }
       } else {
-        initializeDefaults(selectedModel);
+        initializeDefaults(selectedModel, modelConfigBlock);
       }
       localStorage.setItem("hyprFluxLastSelectedImageModel", selectedModel);
+      setError("");
       setUploadErrors({});
     }, [selectedModel]);
 
-    const initializeDefaults = (modelId: string) => {
-      const modelConfig = findImageModelConfig(modelId);
-      const defaults: Record<string, any> = { model: modelId };
-      modelConfig?.fields.forEach((field) => {
-        if (
-          field.default !== undefined &&
-          (!field.showFor || field.showFor.includes(modelId))
-        ) {
+    const initializeDefaults = (
+      specificModelId: string,
+      configBlock: ModelConfig | null,
+    ) => {
+      const defaults: Record<string, any> = { model: specificModelId };
+      configBlock?.fields.forEach((field) => {
+        const appliesToModel =
+          !field.showFor || field.showFor.includes(specificModelId);
+        if (appliesToModel && field.default !== undefined) {
           defaults[field.name] = field.default;
         }
       });
@@ -117,17 +128,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
     };
 
     useEffect(() => {
-      const currentModelId = formValues.model || selectedModel;
+      const currentModelId = formValues.model;
       if (
+        currentModelId &&
         Object.keys(formValues).length > 1 &&
-        findImageModelConfig(currentModelId)
+        findModelConfigBlockContainingModel(currentModelId)
       ) {
         localStorage.setItem(
           `hyprFlux_${currentModelId}`,
           JSON.stringify(formValues),
         );
       }
-    }, [formValues, selectedModel]);
+    }, [formValues]);
 
     useEffect(() => {
       localStorage.setItem("hyprFluxApiKey", apiKey);
@@ -135,143 +147,155 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
 
     useImperativeHandle(ref, () => ({
       loadSettings: (settings: GeneratedImage["settings"]) => {
-        const modelConfig = findImageModelConfig(settings.model);
-        if (modelConfig) {
+        const modelConfigBlock = findModelConfigBlockContainingModel(
+          settings.model,
+        );
+        if (modelConfigBlock) {
           const settingsWithoutFiles = { ...settings };
-          if (settingsWithoutFiles.control_image)
-            delete settingsWithoutFiles.control_image;
-          if (settingsWithoutFiles.image_prompt)
-            delete settingsWithoutFiles.image_prompt;
+          delete settingsWithoutFiles.control_image;
+          delete settingsWithoutFiles.image_prompt;
+          delete settingsWithoutFiles.image;
+          delete settingsWithoutFiles.mask;
           setSelectedModel(settings.model);
           setFormValues({ ...settingsWithoutFiles, model: settings.model });
+          setError("");
           setUploadErrors({});
-          console.log("Loaded settings for model:", settings.model);
         } else {
-          console.warn(`Load failed: ${settings.model} not image model.`);
-          setError(`Cannot load: ${settings.model} not image model.`);
-          setSelectedModel(defaultImageModel);
+          setError(
+            `Cannot load settings: Model '${settings.model}' is not a valid image model.`,
+          );
         }
       },
     }));
 
     const handleModelSelect = (modelId: string) => {
-      if (findImageModelConfig(modelId)) {
+      if (findModelConfigBlockContainingModel(modelId)) {
         setSelectedModel(modelId);
-        setUploadErrors({});
       } else {
-        console.warn(`Attempted select non-image model: ${modelId}`);
+        console.warn(`Tab selection failed: No config found for ${modelId}.`);
       }
+    };
+
+    const handleUploadError = (fieldName: string, errorMsg: string) => {
+      setUploadErrors((prev) => ({ ...prev, [fieldName]: errorMsg || "" }));
+      if (errorMsg) setError(`Upload error for ${fieldName}.`);
+      else setError("");
     };
 
     const handleFormChange = (name: string, value: any) => {
       setFormValues((prev) => {
-        const newValues = { ...prev, [name]: value };
+        const intermediateValues = { ...prev, [name]: value };
+
+        if (error && error.includes(name)) setError("");
         if (uploadErrors[name]) {
-          setUploadErrors((prevErrors) => ({ ...prevErrors, [name]: "" }));
+          setUploadErrors((currentErrors) => ({
+            ...currentErrors,
+            [name]: "",
+          }));
         }
+
         if (name === "model") {
-          const newModelId = value;
-          const newModelConfig = findImageModelConfig(newModelId);
-          if (newModelConfig) {
-            Object.keys(newValues).forEach((key) => {
-              if (key === "model") return;
+          const newSpecificModelId = value;
+          const newModelConfigBlock =
+            findModelConfigBlockContainingModel(newSpecificModelId);
 
-              const fieldDef = newModelConfig.fields.find(
-                (f) => f.name === key,
-              );
+          if (newModelConfigBlock) {
+            const finalValuesForNewModel: Record<string, any> = {
+              model: newSpecificModelId,
+            };
+            const fieldsForNewModel = newModelConfigBlock.fields;
 
-              if (
-                !fieldDef ||
-                (fieldDef.showFor && !fieldDef.showFor.includes(newModelId))
-              ) {
-                delete newValues[key];
-                return;
-              }
+            fieldsForNewModel.forEach((fieldDef) => {
+              const key = fieldDef.name;
+              const shouldShow =
+                !fieldDef.showFor ||
+                fieldDef.showFor.includes(newSpecificModelId);
 
-              if (
-                fieldDef.type === "select" &&
-                fieldDef.options &&
-                !fieldDef.options.includes(newValues[key])
-              ) {
-                console.log(
-                  `Resetting ${key} from ${newValues[key]} to default ${fieldDef.default} for model ${newModelId}`,
-                );
-                newValues[key] = fieldDef.default;
-              } else if (
-                fieldDef.type === "range" ||
-                fieldDef.type === "number"
-              ) {
-                const numValue = Number(newValues[key]);
-                const min = fieldDef.min;
-                const max = fieldDef.max;
-                if (!isNaN(numValue)) {
-                  if (
-                    (min !== undefined && numValue < min) ||
-                    (max !== undefined && numValue > max)
+              if (shouldShow) {
+                const previousValue = intermediateValues[key];
+
+                let keepPrevious = false;
+                if (previousValue !== undefined) {
+                  if (fieldDef.type === "file" && previousValue) {
+                    keepPrevious = true;
+                  } else if (
+                    fieldDef.type === "select" &&
+                    fieldDef.options?.includes(previousValue)
                   ) {
-                    console.log(
-                      `Resetting ${key} from ${numValue} to default ${fieldDef.default} due to range constraints for model ${newModelId}`,
-                    );
-                    newValues[key] = fieldDef.default;
+                    keepPrevious = true;
+                  } else if (
+                    (fieldDef.type === "range" || fieldDef.type === "number") &&
+                    previousValue !== ""
+                  ) {
+                    const numValue = Number(previousValue);
+                    if (
+                      !isNaN(numValue) &&
+                      (fieldDef.min === undefined ||
+                        numValue >= fieldDef.min) &&
+                      (fieldDef.max === undefined || numValue <= fieldDef.max)
+                    ) {
+                      keepPrevious = true;
+                    }
+                  } else if (
+                    fieldDef.type === "checkbox" ||
+                    fieldDef.type === "textarea" ||
+                    fieldDef.type === "text"
+                  ) {
+                    keepPrevious = true;
                   }
-                } else if (newValues[key] !== undefined) {
-                  console.log(
-                    `Resetting ${key} from non-numeric ${newValues[key]} to default ${fieldDef.default} for model ${newModelId}`,
-                  );
-                  newValues[key] = fieldDef.default;
+                }
+
+                if (keepPrevious) {
+                  finalValuesForNewModel[key] = previousValue;
+                } else if (fieldDef.default !== undefined) {
+                  finalValuesForNewModel[key] = fieldDef.default;
                 }
               }
             });
-            newModelConfig.fields.forEach((field) => {
-              if (
-                field.default !== undefined &&
-                newValues[field.name] === undefined &&
-                (!field.showFor || field.showFor.includes(newModelId))
-              ) {
-                newValues[field.name] = field.default;
-              }
-            });
+            return finalValuesForNewModel;
           } else {
+            console.warn(
+              `Model switch failed: No config for ${newSpecificModelId}`,
+            );
             return prev;
           }
         }
-        return newValues;
+
+        return intermediateValues;
       });
     };
 
-    const handleUploadError = (fieldName: string, errorMsg: string) => {
-      setUploadErrors((prev) => ({ ...prev, [fieldName]: errorMsg }));
-      setError(`Upload failed for ${fieldName}: ${errorMsg}`);
-    };
-
     const getValidRequestBody = (values: Record<string, any>) => {
-      const currentModelId = values.model || selectedModel;
-      const modelConfig = findImageModelConfig(currentModelId);
+      const currentModelId = values.model;
+      if (!currentModelId) throw new Error("Model ID missing.");
+      const modelConfigBlock =
+        findModelConfigBlockContainingModel(currentModelId);
+      if (!modelConfigBlock)
+        throw new Error(`No config block for ${currentModelId}.`);
 
-      if (!modelConfig) {
-        throw new Error(
-          `Invalid image model for API request: ${currentModelId}`,
-        );
-      }
-
-      const applicableFields = modelConfig.fields.filter(
-        (field) => !field.showFor || field.showFor.includes(currentModelId),
-      );
-      const applicableFieldNames = applicableFields.map((field) => field.name);
-      if (!applicableFieldNames.includes("model"))
-        applicableFieldNames.push("model");
-      if (!applicableFieldNames.includes("prompt"))
-        applicableFieldNames.push("prompt");
+      const applicableFieldNames = new Set<string>(["model", "prompt"]);
+      modelConfigBlock.fields.forEach((field) => {
+        if (!field.showFor || field.showFor.includes(currentModelId)) {
+          applicableFieldNames.add(field.name);
+        }
+      });
 
       const filteredValues = Object.entries(values).reduce(
         (acc, [key, value]) => {
           if (
-            applicableFieldNames.includes(key) &&
+            applicableFieldNames.has(key) &&
             value !== undefined &&
             value !== null &&
             value !== ""
           ) {
-            if (
+            if (key === "image" && currentModelId === "gpt-image-1") {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) && value.length > 0)
+              ) {
+                acc[key] = value;
+              }
+            } else if (
               (currentModelId === "dall-e-3" ||
                 currentModelId === "azure/dall-e-3") &&
               key === "style" &&
@@ -289,12 +313,7 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
       if (!filteredValues.prompt) filteredValues.prompt = "";
       filteredValues.model = currentModelId;
 
-      const result = {
-        ...filteredValues,
-        response_format: "b64_json",
-      };
-
-      return result;
+      return { ...filteredValues, response_format: "b64_json" };
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -302,9 +321,24 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
       setIsLoading(true);
       setError("");
       setUploadErrors({});
-      const currentModelId = formValues.model || selectedModel;
-      if (!findImageModelConfig(currentModelId)) {
-        setError(`Invalid model: ${currentModelId}`);
+      const currentModelId = formValues.model;
+
+      if (
+        !currentModelId ||
+        !findModelConfigBlockContainingModel(currentModelId)
+      ) {
+        setError(`Invalid model selected.`);
+        setIsLoading(false);
+        return;
+      }
+      const hasUploadErrors = Object.values(uploadErrors).some((msg) => !!msg);
+      if (hasUploadErrors) {
+        setError("Resolve upload errors.");
+        setIsLoading(false);
+        return;
+      }
+      if (!apiKey) {
+        setError("API Key required.");
         setIsLoading(false);
         return;
       }
@@ -316,38 +350,46 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
           JSON.stringify(requestBody, null, 2),
         );
 
-        const modelSchema = modelValidations[requestBody.model];
-        if (modelSchema) {
-          const validationSchema = modelSchema.extend({
-            control_image: z.string().url().optional(),
-            image_prompt: z.string().url().optional(),
-          });
-          validationSchema.parse(requestBody);
+        const baseModelSchema = modelValidations[requestBody.model];
+        if (baseModelSchema) {
+          let finalSchema = baseModelSchema;
+          if (requestBody.model === "gpt-image-1") {
+            finalSchema = baseModelSchema.extend({
+              image: z
+                .union([z.string().url(), z.array(z.string().url())])
+                .optional(),
+              mask: z.string().url().optional(),
+            });
+          } else {
+            finalSchema = baseModelSchema.extend({
+              control_image: z.string().url().optional(),
+              image_prompt: z.string().url().optional(),
+            });
+          }
+          finalSchema.parse(requestBody);
+          console.log(`Validation OK for ${requestBody.model}.`);
         } else {
-          console.warn("No validation schema:", requestBody.model);
+          console.warn(`No Zod schema for ${requestBody.model}.`);
         }
 
         const apiEndpoint = "https://api.hyprlab.io/v1/images/generations";
-        const headers = {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        };
         const response = await fetch(apiEndpoint, {
           method: "POST",
-          headers,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
           body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({
-            error: {
-              message: `HTTP Error: ${response.status} ${response.statusText}`,
-            },
-          }));
+          const errorData = await response
+            .json()
+            .catch(() => ({ error: { message: `HTTP ${response.status}` } }));
           throw new Error(
             errorData.error?.message ||
               errorData.message ||
-              `Request failed: ${response.status}`,
+              `API failed: ${response.status}`,
           );
         }
         const data = await response.json();
@@ -357,8 +399,6 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
 
         const storageSettings = { ...requestBody };
         delete storageSettings.response_format;
-        delete storageSettings.output_format;
-
         const newImage: GeneratedImage = {
           type: "image",
           imageData: data.data[0].b64_json,
@@ -372,27 +412,31 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
 
         onImageGenerated(newImage);
       } catch (err) {
-        console.error("Image generation error:", err);
         const errorMsg =
-          err instanceof Error ? err.message : "Error generating image.";
+          err instanceof z.ZodError
+            ? `Invalid settings: ${err.errors.map((e) => `${e.path.join(".")} - ${e.message}`).join("; ")}`
+            : err instanceof Error
+              ? err.message
+              : "Unexpected error.";
         setError(errorMsg);
-        if (err instanceof z.ZodError) {
-          setError(
-            `Invalid settings: ${err.errors.map((e) => `${e.path.join(".")} ${e.message}`).join(", ")}`,
-          );
-        }
       } finally {
         setIsLoading(false);
       }
     };
 
+    const configBlockForForm =
+      findModelConfigBlockContainingModel(selectedModel);
+
     return (
       <div className="h-full flex flex-col">
+        {}
         <ModelTabs
           selectedModel={selectedModel}
           onModelSelect={handleModelSelect}
           filterType="image"
         />
+
+        {}
         <form
           onSubmit={handleSubmit}
           className="space-y-4 flex-grow flex flex-col mt-4"
@@ -403,7 +447,8 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
               htmlFor="imageApiKey"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              API Key
+              {" "}
+              API Key{" "}
             </label>
             <input
               type="password"
@@ -413,47 +458,72 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
               required
               className="block w-full border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 rounded-md bg-gray-100 placeholder-gray-400"
               placeholder="Enter your API key"
+              autoComplete="current-password"
             />
           </div>
+
           {}
-          <div className="flex-grow overflow-y-auto pr-2 -mr-2">
-            <ModelForm
-              modelId={selectedModel}
-              values={formValues}
-              onChange={handleFormChange}
-              apiKey={apiKey}
-              onUploadError={handleUploadError}
-            />
-            {Object.entries(uploadErrors).map(([field, msg]) =>
-              msg ? (
-                <p key={field} className="mt-1 text-xs text-red-500">
-                  Error for {field}: {msg}
-                </p>
-              ) : null,
-            )}
-          </div>
-          {}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0 transition duration-150 ease-in-out"
-          >
-            {isLoading ? (
-              <>
-                {" "}
-                <Loader className="animate-spin mr-2 h-5 w-5" /> Generating...{" "}
-              </>
+          <div className="flex-grow overflow-y-auto pr-2 -mr-2 custom-scrollbar">
+            {" "}
+            {}
+            {configBlockForForm ? (
+              <ModelForm
+                modelId={selectedModel}
+                values={formValues}
+                onChange={handleFormChange}
+                apiKey={apiKey}
+                onUploadError={handleUploadError}
+              />
             ) : (
-              <>
-                {" "}
-                <ImageIcon size={18} className="mr-2" /> Generate Image{" "}
-              </>
+              <p className="text-red-500 p-4">
+                Error: Could not load form configuration for model '
+                {selectedModel}'. Check models.ts.
+              </p>
             )}
-          </button>
+            {}
+            {Object.entries(uploadErrors)
+              .filter(([, msg]) => !!msg)
+              .map(([field, msg]) => (
+                <p key={field} className="mt-1 text-xs text-red-500 px-1">
+                  {" "}
+                  {}
+                  <AlertCircle size={12} className="inline mr-1" /> Upload error
+                  ({field}): {msg}
+                </p>
+              ))}
+          </div>
+
+          {}
+          <div className="flex-shrink-0 mt-auto pt-4">
+            <button
+              type="submit"
+              disabled={
+                isLoading ||
+                Object.values(uploadErrors).some((msg) => !!msg) ||
+                !apiKey
+              }
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed transition duration-150 ease-in-out"
+            >
+              {isLoading ? (
+                <>
+                  <Loader className="animate-spin mr-2 h-5 w-5" /> Generating...
+                </>
+              ) : (
+                <>
+                  <ImageIcon size={18} className="mr-2" /> Generate Image
+                </>
+              )}
+            </button>
+          </div>
         </form>
+
         {}
-        {error && !error.startsWith("Upload failed") && (
-          <p className="mt-2 text-red-600 text-sm flex-shrink-0">{error}</p>
+        {error && (
+          <p className="mt-2 text-red-600 text-sm flex-shrink-0 flex items-center px-1">
+            {" "}
+            {}
+            <AlertCircle size={16} className="mr-1" /> {error}
+          </p>
         )}
       </div>
     );
