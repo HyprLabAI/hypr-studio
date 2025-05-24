@@ -324,6 +324,37 @@ export const modelFamilies: ModelFamily[] = [
     ],
   },
   {
+    id: "imagen",
+    name: "Google",
+    description: "Google image generation models",
+    type: "image",
+    models: [
+      {
+        id: "imagen",
+        name: "Imagen",
+        description: "Imagen models",
+        fields: [
+          {
+            name: "model",
+            type: "select",
+            label: "Model Version",
+            required: true,
+            options: ["imagen-4", "imagen-3", "imagen-3-fast"],
+            default: "imagen-4",
+          },
+          { name: "prompt", type: "textarea", label: "Prompt", required: true },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: ["1:1", "3:4", "4:3", "9:16", "16:9"],
+            default: "1:1",
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: "flux",
     name: "Black Forest Labs",
     description: "Black Forest Labs image generation models",
