@@ -248,6 +248,7 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
                 clearInterval(pollingIntervalRef.current);
 
               const settingsUsed = { ...formValues };
+              delete settingsUsed.response_format;
               const generatedVideoData: GeneratedVideo = {
                 type: "video",
                 videoUrl: videoResultUrl,
@@ -306,7 +307,8 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
       setFormValues((prev) => {
         let newValues = { ...prev, [name]: value };
 
-        if (error && error.includes(name)) setError(null);
+        if (error && error.toLowerCase().includes(name.replace(/_/g, " ")))
+          setError(null);
         if (uploadErrors[name]) {
           setUploadErrors((current) => ({ ...current, [name]: "" }));
         }
@@ -317,60 +319,63 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
             findModelConfigBlockContainingModel(newSpecificModelId);
 
           if (newModelConfigBlock) {
+            const finalValuesForNewModel: Record<string, any> = {
+              model: newSpecificModelId,
+            };
             const fieldsForNewModel = newModelConfigBlock.fields;
-            const validFieldNames = new Set(
-              fieldsForNewModel.map((f) => f.name),
-            );
-            validFieldNames.add("model");
 
-            Object.keys(newValues).forEach((key) => {
-              if (!validFieldNames.has(key)) {
-                delete newValues[key];
-                return;
-              }
-              const fieldDef = fieldsForNewModel.find((f) => f.name === key);
-              if (fieldDef) {
-                const shouldShow =
-                  !fieldDef.showFor ||
-                  fieldDef.showFor.includes(newSpecificModelId);
-                if (!shouldShow) {
-                  delete newValues[key];
-                  return;
-                }
-                if (
-                  fieldDef.type === "select" &&
-                  fieldDef.options &&
-                  !fieldDef.options.includes(newValues[key])
-                ) {
-                  newValues[key] = fieldDef.default;
-                } else if (
-                  (fieldDef.type === "range" || fieldDef.type === "number") &&
-                  newValues[key] !== ""
-                ) {
-                  const numValue = Number(newValues[key]);
-                  if (
-                    isNaN(numValue) ||
-                    (fieldDef.min !== undefined && numValue < fieldDef.min) ||
-                    (fieldDef.max !== undefined && numValue > fieldDef.max)
+            fieldsForNewModel.forEach((fieldDef) => {
+              const key = fieldDef.name;
+              const shouldShow =
+                !fieldDef.showFor ||
+                fieldDef.showFor.includes(newSpecificModelId);
+
+              if (shouldShow) {
+                const previousValue = newValues[key];
+                let keepPrevious = false;
+
+                if (previousValue !== undefined) {
+                  if (fieldDef.type === "file" && previousValue) {
+                    keepPrevious = true;
+                  } else if (
+                    fieldDef.type === "select" &&
+                    fieldDef.options?.includes(previousValue)
                   ) {
-                    newValues[key] = fieldDef.default;
+                    keepPrevious = true;
+                  } else if (
+                    (fieldDef.type === "range" || fieldDef.type === "number") &&
+                    previousValue !== ""
+                  ) {
+                    const numValue = Number(previousValue);
+                    if (
+                      !isNaN(numValue) &&
+                      (fieldDef.min === undefined ||
+                        numValue >= fieldDef.min) &&
+                      (fieldDef.max === undefined || numValue <= fieldDef.max)
+                    ) {
+                      keepPrevious = true;
+                    }
+                  } else if (
+                    fieldDef.type === "checkbox" ||
+                    fieldDef.type === "textarea" ||
+                    fieldDef.type === "text"
+                  ) {
+                    keepPrevious = true;
                   }
                 }
+
+                if (keepPrevious) {
+                  finalValuesForNewModel[key] = previousValue;
+                } else if (fieldDef.default !== undefined) {
+                  finalValuesForNewModel[key] = fieldDef.default;
+                }
               }
             });
-            fieldsForNewModel.forEach((field) => {
-              const applies =
-                !field.showFor || field.showFor.includes(newSpecificModelId);
-              if (
-                applies &&
-                field.default !== undefined &&
-                newValues[field.name] === undefined
-              ) {
-                newValues[field.name] = field.default;
-              }
-            });
-            newValues.model = newSpecificModelId;
+            return finalValuesForNewModel;
           } else {
+            console.warn(
+              `Model switch failed: No config for ${newSpecificModelId}`,
+            );
             return prev;
           }
         }
@@ -380,7 +385,8 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
 
     const handleUploadError = (fieldName: string, errorMsg: string) => {
       setUploadErrors((prev) => ({ ...prev, [fieldName]: errorMsg || "" }));
-      if (errorMsg) setError(`Upload error for ${fieldName}.`);
+      if (errorMsg)
+        setError(`Upload error for ${fieldName.replace(/_/g, " ")}.`);
       else setError(null);
     };
 
@@ -444,7 +450,6 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
       setPollingUrl(null);
       setPollingStatus(null);
       setFinalVideoUrl(null);
-      setUploadErrors({});
 
       const currentModelId = formValues.model;
 
@@ -458,14 +463,52 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
         setIsLoading(false);
         return;
       }
-      const hasUploadErrors = Object.values(uploadErrors).some((msg) => !!msg);
-      if (hasUploadErrors) {
-        setError("Please resolve file upload errors.");
+
+      if (!apiKey) {
+        setError("API Key is required.");
         setIsLoading(false);
         return;
       }
-      if (!apiKey) {
-        setError("API Key is required.");
+
+      const modelConfigBlock =
+        findModelConfigBlockContainingModel(currentModelId);
+      let firstValidationError = "";
+
+      if (modelConfigBlock) {
+        for (const field of modelConfigBlock.fields) {
+          const isApplicableToCurrentModel =
+            !field.showFor || field.showFor.includes(currentModelId);
+          if (isApplicableToCurrentModel && field.required) {
+            if (field.type === "file") {
+              if (!formValues[field.name]) {
+                firstValidationError = `${field.label} is required. Please upload a file.`;
+                break;
+              }
+            } else {
+              if (
+                formValues[field.name] === undefined ||
+                formValues[field.name] === null ||
+                formValues[field.name] === ""
+              ) {
+                firstValidationError = `${field.label} is required.`;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (firstValidationError) {
+        setError(firstValidationError);
+        setIsLoading(false);
+        return;
+      }
+
+      const hasExistingUploadErrors = Object.values(uploadErrors).some(
+        (msg) => !!msg,
+      );
+      if (hasExistingUploadErrors) {
+        setError("Please resolve file upload errors before generating.");
         setIsLoading(false);
         return;
       }
@@ -576,7 +619,9 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
           </div>
 
           {}
-          <div className="flex-grow overflow-y-auto pr-2 -mr-2">
+          <div className="flex-grow overflow-y-auto pr-2 -mr-2 custom-scrollbar">
+            {" "}
+            {}
             {configBlockForForm ? (
               <ModelForm
                 modelId={selectedModel}
@@ -586,18 +631,22 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
                 onUploadError={handleUploadError}
               />
             ) : (
-              <p className="text-red-500">
+              <p className="text-red-500 p-4">
+                {" "}
+                {}
                 Error: Could not load form configuration for video model '
-                {selectedModel}'.
+                {selectedModel}'. Check models.ts.
               </p>
             )}
             {}
             {Object.entries(uploadErrors)
               .filter(([, msg]) => !!msg)
               .map(([field, msg]) => (
-                <p key={field} className="mt-1 text-xs text-red-500">
+                <p key={field} className="mt-1 text-xs text-red-500 px-1">
                   {" "}
-                  Upload error ({field}): {msg}{" "}
+                  {}
+                  <AlertCircle size={12} className="inline mr-1" /> {}
+                  Upload error ({field.replace(/_/g, " ")}): {msg}
                 </p>
               ))}
           </div>

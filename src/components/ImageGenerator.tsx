@@ -76,7 +76,7 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
     });
     const [formValues, setFormValues] = useState<Record<string, any>>({});
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [error, setError] = useState<string | null>(null);
     const [uploadErrors, setUploadErrors] = useState<Record<string, string>>(
       {},
     );
@@ -86,7 +86,7 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
         findModelConfigBlockContainingModel(selectedModel);
       if (!modelConfigBlock) {
         console.error(
-          `Cannot load/initialize: No config block found for ${selectedModel}. Resetting.`,
+          `ImageGenerator: Cannot load/initialize: No config block found for ${selectedModel}. Resetting.`,
         );
         setSelectedModel(defaultImageModel);
         return;
@@ -108,7 +108,7 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
         initializeDefaults(selectedModel, modelConfigBlock);
       }
       localStorage.setItem("hyprFluxLastSelectedImageModel", selectedModel);
-      setError("");
+      setError(null);
       setUploadErrors({});
     }, [selectedModel]);
 
@@ -147,6 +147,12 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
 
     useImperativeHandle(ref, () => ({
       loadSettings: (settings: GeneratedImage["settings"]) => {
+        if (!settings || !settings.model) {
+          setError(
+            "Cannot load settings: Invalid settings object or model missing.",
+          );
+          return;
+        }
         const modelConfigBlock = findModelConfigBlockContainingModel(
           settings.model,
         );
@@ -156,9 +162,10 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
           delete settingsWithoutFiles.image_prompt;
           delete settingsWithoutFiles.image;
           delete settingsWithoutFiles.mask;
+
           setSelectedModel(settings.model);
           setFormValues({ ...settingsWithoutFiles, model: settings.model });
-          setError("");
+          setError(null);
           setUploadErrors({});
         } else {
           setError(
@@ -178,15 +185,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
 
     const handleUploadError = (fieldName: string, errorMsg: string) => {
       setUploadErrors((prev) => ({ ...prev, [fieldName]: errorMsg || "" }));
-      if (errorMsg) setError(`Upload error for ${fieldName}.`);
-      else setError("");
+      if (errorMsg)
+        setError(`Upload error for ${fieldName.replace(/_/g, " ")}.`);
+      else setError(null);
     };
 
     const handleFormChange = (name: string, value: any) => {
       setFormValues((prev) => {
         const intermediateValues = { ...prev, [name]: value };
 
-        if (error && error.includes(name)) setError("");
+        if (error && error.toLowerCase().includes(name.replace(/_/g, " "))) {
+          setError(null);
+        }
         if (uploadErrors[name]) {
           setUploadErrors((currentErrors) => ({
             ...currentErrors,
@@ -213,7 +223,6 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
 
               if (shouldShow) {
                 const previousValue = intermediateValues[key];
-
                 let keepPrevious = false;
                 if (previousValue !== undefined) {
                   if (fieldDef.type === "file" && previousValue) {
@@ -260,7 +269,6 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
             return prev;
           }
         }
-
         return intermediateValues;
       });
     };
@@ -291,7 +299,9 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
             if (key === "image" && currentModelId === "gpt-image-1") {
               if (
                 (typeof value === "string" && value) ||
-                (Array.isArray(value) && value.length > 0)
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
               ) {
                 acc[key] = value;
               }
@@ -310,7 +320,16 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
         {} as Record<string, any>,
       );
 
-      if (!filteredValues.prompt) filteredValues.prompt = "";
+      if (
+        !filteredValues.prompt &&
+        modelConfigBlock.fields.some((f) => f.name === "prompt" && f.required)
+      ) {
+      } else if (
+        !filteredValues.prompt &&
+        !modelConfigBlock.fields.some((f) => f.name === "prompt" && f.required)
+      ) {
+      }
+
       filteredValues.model = currentModelId;
 
       return { ...filteredValues, response_format: "b64_json" };
@@ -319,26 +338,76 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setIsLoading(true);
-      setError("");
-      setUploadErrors({});
+      setError(null);
+
       const currentModelId = formValues.model;
 
       if (
         !currentModelId ||
         !findModelConfigBlockContainingModel(currentModelId)
       ) {
-        setError(`Invalid model selected.`);
+        setError(`Invalid model selected: '${currentModelId || "None"}'.`);
         setIsLoading(false);
         return;
       }
-      const hasUploadErrors = Object.values(uploadErrors).some((msg) => !!msg);
-      if (hasUploadErrors) {
-        setError("Resolve upload errors.");
-        setIsLoading(false);
-        return;
-      }
+
       if (!apiKey) {
-        setError("API Key required.");
+        setError("API Key is required.");
+        setIsLoading(false);
+        return;
+      }
+
+      const modelConfigBlock =
+        findModelConfigBlockContainingModel(currentModelId);
+      let firstValidationError = "";
+
+      if (modelConfigBlock) {
+        for (const field of modelConfigBlock.fields) {
+          const isApplicableToCurrentModel =
+            !field.showFor || field.showFor.includes(currentModelId);
+          if (isApplicableToCurrentModel && field.required) {
+            if (field.type === "file") {
+              if (
+                field.name === "image" &&
+                currentModelId === "gpt-image-1" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (!formValues[field.name]) {
+                firstValidationError = `${field.label} is required. Please upload a file.`;
+                break;
+              }
+            } else {
+              if (
+                formValues[field.name] === undefined ||
+                formValues[field.name] === null ||
+                formValues[field.name] === ""
+              ) {
+                firstValidationError = `${field.label} is required.`;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (firstValidationError) {
+        setError(firstValidationError);
+        setIsLoading(false);
+        return;
+      }
+
+      const hasExistingUploadErrors = Object.values(uploadErrors).some(
+        (msg) => !!msg,
+      );
+      if (hasExistingUploadErrors) {
+        setError("Please resolve all file upload errors before generating.");
         setIsLoading(false);
         return;
       }
@@ -356,11 +425,15 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
           if (requestBody.model === "gpt-image-1") {
             finalSchema = baseModelSchema.extend({
               image: z
-                .union([z.string().url(), z.array(z.string().url())])
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
                 .optional(),
               mask: z.string().url().optional(),
             });
-          } else {
+          } else if (
+            modelConfigBlock?.fields.some(
+              (f) => f.name === "control_image" || f.name === "image_prompt",
+            )
+          ) {
             finalSchema = baseModelSchema.extend({
               control_image: z.string().url().optional(),
               image_prompt: z.string().url().optional(),
@@ -369,7 +442,9 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
           finalSchema.parse(requestBody);
           console.log(`Validation OK for ${requestBody.model}.`);
         } else {
-          console.warn(`No Zod schema for ${requestBody.model}.`);
+          console.warn(
+            `No Zod schema for ${requestBody.model}. Skipping Zod validation.`,
+          );
         }
 
         const apiEndpoint = "https://api.hyprlab.io/v1/images/generations";
@@ -383,30 +458,35 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
         });
 
         if (!response.ok) {
-          const errorData = await response
-            .json()
-            .catch(() => ({ error: { message: `HTTP ${response.status}` } }));
+          const errorData = await response.json().catch(() => ({
+            error: { message: `HTTP Error: ${response.status}` },
+          }));
           throw new Error(
             errorData.error?.message ||
               errorData.message ||
-              `API failed: ${response.status}`,
+              `API request failed with status: ${response.status}`,
           );
         }
         const data = await response.json();
-        if (!data.data?.[0]?.b64_json) {
-          throw new Error("Invalid API response structure.");
+        if (!data.data?.[0]?.b64_json && !data.data?.[0]?.url) {
+          throw new Error(
+            "Invalid API response structure: Missing image data (b64_json or url).",
+          );
         }
 
         const storageSettings = { ...requestBody };
         delete storageSettings.response_format;
+
         const newImage: GeneratedImage = {
           type: "image",
-          imageData: data.data[0].b64_json,
-          prompt: requestBody.prompt,
+          imageData: data.data[0].b64_json || data.data[0].url,
+          prompt: requestBody.prompt || "N/A",
           revised_prompt: data.data[0].revised_prompt,
           settings: storageSettings,
           timestamp: new Date(
-            data.created ? data.created * 1000 : Date.now(),
+            data.created && typeof data.created === "number"
+              ? data.created * 1000
+              : Date.now(),
           ).toISOString(),
         };
 
@@ -417,7 +497,7 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
             ? `Invalid settings: ${err.errors.map((e) => `${e.path.join(".")} - ${e.message}`).join("; ")}`
             : err instanceof Error
               ? err.message
-              : "Unexpected error.";
+              : "An unexpected error occurred during image generation.";
         setError(errorMsg);
       } finally {
         setIsLoading(false);
@@ -447,8 +527,7 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
               htmlFor="imageApiKey"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              {" "}
-              API Key{" "}
+              API Key
             </label>
             <input
               type="password"
@@ -464,8 +543,6 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
 
           {}
           <div className="flex-grow overflow-y-auto pr-2 -mr-2 custom-scrollbar">
-            {" "}
-            {}
             {configBlockForForm ? (
               <ModelForm
                 modelId={selectedModel}
@@ -485,10 +562,8 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
               .filter(([, msg]) => !!msg)
               .map(([field, msg]) => (
                 <p key={field} className="mt-1 text-xs text-red-500 px-1">
-                  {" "}
-                  {}
-                  <AlertCircle size={12} className="inline mr-1" /> Upload error
-                  ({field}): {msg}
+                  <AlertCircle size={12} className="inline mr-1" />
+                  Upload error ({field.replace(/_/g, " ")}): {msg}
                 </p>
               ))}
           </div>
@@ -519,11 +594,14 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
 
         {}
         {error && (
-          <p className="mt-2 text-red-600 text-sm flex-shrink-0 flex items-center px-1">
+          <div className="mt-4 flex-shrink-0">
             {" "}
             {}
-            <AlertCircle size={16} className="mr-1" /> {error}
-          </p>
+            <div className="flex items-center p-3 bg-red-100 text-red-600 border border-red-200 text-sm rounded-md">
+              <AlertCircle className="mr-2 flex-shrink-0" size={16} />
+              <span>Error: {error}</span>
+            </div>
+          </div>
         )}
       </div>
     );
