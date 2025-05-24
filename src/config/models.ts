@@ -911,7 +911,7 @@ export const modelFamilies: ModelFamily[] = [
             name: "start_image",
             type: "file",
             label: "Start Image",
-            required: false,
+            required: true,
           },
           {
             name: "end_image",
