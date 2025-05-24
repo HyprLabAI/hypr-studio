@@ -911,7 +911,7 @@ export const modelFamilies: ModelFamily[] = [
             name: "start_image",
             type: "file",
             label: "Start Image",
-            required: true,
+            required: false,
           },
           {
             name: "end_image",
@@ -979,7 +979,7 @@ export const modelFamilies: ModelFamily[] = [
             name: "image",
             type: "file",
             label: "Input Image",
-            required: true,
+            required: false,
             showFor: ["veo-2"],
           },
           {
