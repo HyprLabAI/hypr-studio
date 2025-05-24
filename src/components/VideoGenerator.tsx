@@ -478,7 +478,14 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
         for (const field of modelConfigBlock.fields) {
           const isApplicableToCurrentModel =
             !field.showFor || field.showFor.includes(currentModelId);
-          if (isApplicableToCurrentModel && field.required) {
+
+          let isFieldActuallyRequired = field.required;
+
+          if (currentModelId === "kling-v2" && field.name === "start_image") {
+            isFieldActuallyRequired = false;
+          }
+
+          if (isApplicableToCurrentModel && isFieldActuallyRequired) {
             if (field.type === "file") {
               if (!formValues[field.name]) {
                 firstValidationError = `${field.label} is required. Please upload a file.`;
