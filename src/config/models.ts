@@ -57,7 +57,89 @@ const veoValidationBase = {
   aspect_ratio: z.enum(["16:9", "9:16"]).optional().default("16:9"),
 };
 
+const fluxKontextMaxValidation = z.object({
+  model: z.literal("flux-kontext-max"),
+  prompt: z.string().min(1),
+  input_image: z.string().url().optional(),
+  aspect_ratio: z
+    .enum([
+      "match_input_image",
+      "1:1",
+      "16:9",
+      "9:16",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "4:5",
+      "5:4",
+      "21:9",
+      "9:21",
+      "2:1",
+      "1:2",
+    ])
+    .optional()
+    .default("match_input_image"),
+});
+
+const fluxKontextProValidation = z.object({
+  model: z.literal("flux-kontext-pro"),
+  prompt: z.string().min(1),
+  input_image: z.string().url().optional(),
+  aspect_ratio: z
+    .enum([
+      "match_input_image",
+      "1:1",
+      "16:9",
+      "9:16",
+      "4:3",
+      "3:4",
+      "3:2",
+      "2:3",
+      "4:5",
+      "5:4",
+      "21:9",
+      "9:21",
+      "2:1",
+      "1:2",
+    ])
+    .optional()
+    .default("match_input_image"),
+});
+
+const fluxUltraValidation = z.object({
+  model: z.literal("flux-1.1-pro-ultra"),
+  prompt: z.string().min(1),
+  image_prompt: z.string().url().optional(),
+  aspect_ratio: z
+    .enum([
+      "21:9",
+      "16:9",
+      "3:2",
+      "4:3",
+      "5:4",
+      "1:1",
+      "4:5",
+      "3:4",
+      "2:3",
+      "9:16",
+      "9:21",
+    ])
+    .optional()
+    .default("1:1"),
+  image_prompt_strength: z
+    .number()
+    .min(0, "Image prompt strength must be at least 0.")
+    .max(1, "Image prompt strength must be at most 1.")
+    .optional()
+    .default(0.1),
+  raw: z.boolean().optional().default(false),
+});
+
 export const modelValidations = {
+  "flux-kontext-max": fluxKontextMaxValidation,
+  "flux-kontext-pro": fluxKontextProValidation,
+  "flux-1.1-pro-ultra": fluxUltraValidation,
   "kling-v2": z.object(klingV2ValidationBase),
   "kling-v1.6-standard": z.object(klingStandardValidationBase),
   "kling-v1.6-pro": z.object(klingProValidationBase),
@@ -400,6 +482,8 @@ export const modelFamilies: ModelFamily[] = [
             label: "Model Version",
             required: true,
             options: [
+              "flux-kontext-max",
+              "flux-kontext-pro",
               "flux-1.1-pro-ultra",
               "flux-1.1-pro",
               "flux-pro",
@@ -407,9 +491,15 @@ export const modelFamilies: ModelFamily[] = [
               "flux-schnell",
               "flux-pro-canny",
             ],
-            default: "flux-1.1-pro-ultra",
+            default: "flux-kontext-max",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
+          {
+            name: "input_image",
+            type: "file",
+            label: "Input Image",
+            showFor: ["flux-kontext-max", "flux-kontext-pro"],
+          },
           {
             name: "control_image",
             type: "file",
@@ -487,6 +577,29 @@ export const modelFamilies: ModelFamily[] = [
             ],
             default: "1:1",
             showFor: ["flux-1.1-pro-ultra"],
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: [
+              "match_input_image",
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3",
+              "4:5",
+              "5:4",
+              "21:9",
+              "9:21",
+              "2:1",
+              "1:2",
+            ],
+            default: "match_input_image",
+            showFor: ["flux-kontext-max", "flux-kontext-pro"],
           },
           {
             name: "raw",
