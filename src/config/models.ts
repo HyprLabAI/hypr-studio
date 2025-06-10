@@ -1105,16 +1105,16 @@ export const modelFamilies: ModelFamily[] = [
     type: "video",
     models: [
       {
-        id: "veo-2-config",
-        name: "Veo 2",
-        description: "Google Veo 2 Model",
+        id: "veo",
+        name: "Veo",
+        description: "Google Veo Model",
         fields: [
           {
             name: "model",
             type: "select",
             label: "Model Version",
             required: true,
-            options: ["veo-2"],
+            options: ["veo-2", "veo-3"],
             default: "veo-2",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
