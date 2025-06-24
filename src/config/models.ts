@@ -5,6 +5,40 @@ const baseValidation = {
   output_format: z.enum(["png", "jpeg", "webp"]).default("png"),
 };
 
+const klingV21MasterValidationBase = {
+  model: z.literal("kling-v2.1-master"),
+  prompt: z.string().min(1),
+  duration: z
+    .union([z.literal(5), z.literal(10)])
+    .optional()
+    .default(5),
+  start_image: z.string().url().optional(),
+  aspect_ratio: z.enum(["16:9", "1:1", "9:16"]).optional().default("16:9"),
+  negative_prompt: z.string().optional(),
+};
+
+const klingV21ProValidationBase = {
+  model: z.literal("kling-v2.1-pro"),
+  prompt: z.string().min(1),
+  duration: z
+    .union([z.literal(5), z.literal(10)])
+    .optional()
+    .default(5),
+  start_image: z.string().url(),
+  negative_prompt: z.string().optional(),
+};
+
+const klingV21StandardValidationBase = {
+  model: z.literal("kling-v2.1-standard"),
+  prompt: z.string().min(1),
+  duration: z
+    .union([z.literal(5), z.literal(10)])
+    .optional()
+    .default(5),
+  start_image: z.string().url(),
+  negative_prompt: z.string().optional(),
+};
+
 const klingV2ValidationBase = {
   model: z.literal("kling-v2"),
   prompt: z.string().min(1),
@@ -18,20 +52,6 @@ const klingV2ValidationBase = {
   negative_prompt: z.string().optional(),
 };
 
-const klingStandardValidationBase = {
-  model: z.literal("kling-v1.6-standard"),
-  prompt: z.string().min(1),
-  duration: z
-    .union([z.literal(5), z.literal(10)])
-    .optional()
-    .default(5),
-  cfg_scale: z.number().min(0).max(1).optional().default(0.5),
-  start_image: z.string().url(),
-  end_image: z.string().url().optional(),
-  aspect_ratio: z.enum(["16:9", "1:1", "9:16"]).optional().default("16:9"),
-  negative_prompt: z.string().optional(),
-};
-
 const klingProValidationBase = {
   model: z.literal("kling-v1.6-pro"),
   prompt: z.string().min(1),
@@ -40,7 +60,21 @@ const klingProValidationBase = {
     .optional()
     .default(5),
   cfg_scale: z.number().min(0).max(1).optional().default(0.5),
-  start_image: z.string().url(),
+  start_image: z.string().url().optional(),
+  end_image: z.string().url().optional(),
+  aspect_ratio: z.enum(["16:9", "1:1", "9:16"]).optional().default("16:9"),
+  negative_prompt: z.string().optional(),
+};
+
+const klingStandardValidationBase = {
+  model: z.literal("kling-v1.6-standard"),
+  prompt: z.string().min(1),
+  duration: z
+    .union([z.literal(5), z.literal(10)])
+    .optional()
+    .default(5),
+  cfg_scale: z.number().min(0).max(1).optional().default(0.5),
+  start_image: z.string().url().optional(),
   end_image: z.string().url().optional(),
   aspect_ratio: z.enum(["16:9", "1:1", "9:16"]).optional().default("16:9"),
   negative_prompt: z.string().optional(),
@@ -140,9 +174,12 @@ export const modelValidations = {
   "flux-kontext-max": fluxKontextMaxValidation,
   "flux-kontext-pro": fluxKontextProValidation,
   "flux-1.1-pro-ultra": fluxUltraValidation,
+  "kling-v2.1-master": z.object(klingV21MasterValidationBase),
+  "kling-v2.1-pro": z.object(klingV21ProValidationBase),
+  "kling-v2.1-standard": z.object(klingV21StandardValidationBase),
   "kling-v2": z.object(klingV2ValidationBase),
-  "kling-v1.6-standard": z.object(klingStandardValidationBase),
   "kling-v1.6-pro": z.object(klingProValidationBase),
+  "kling-v1.6-standard": z.object(klingStandardValidationBase),
   "veo-2": z.object(veoValidationBase),
   "dall-e-3": z.object({
     ...baseValidation,
@@ -450,8 +487,14 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Model Version",
             required: true,
-            options: ["imagen-4", "imagen-3", "imagen-3-fast"],
-            default: "imagen-4",
+            options: [
+              "imagen-4-ultra",
+              "imagen-4",
+              "imagen-4-fast",
+              "imagen-3",
+              "imagen-3-fast",
+            ],
+            default: "imagen-4-ultra",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
           {
@@ -1045,15 +1088,22 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Model Version",
             required: true,
-            options: ["kling-v2", "kling-v1.6-pro", "kling-v1.6-standard"],
-            default: "kling-v2",
+            options: [
+              "kling-v2.1-master",
+              "kling-v2.1-pro",
+              "kling-v2.1-standard",
+              "kling-v2",
+              "kling-v1.6-pro",
+              "kling-v1.6-standard",
+            ],
+            default: "kling-v2.1-master",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
           {
             name: "start_image",
             type: "file",
             label: "Start Image",
-            required: true,
+            required: false,
           },
           {
             name: "end_image",
@@ -1079,6 +1129,7 @@ export const modelFamilies: ModelFamily[] = [
             step: 0.01,
             default: 0.5,
             required: false,
+            showFor: ["kling-v2", "kling-v1.6-pro", "kling-v1.6-standard"],
           },
           {
             name: "aspect_ratio",
@@ -1087,6 +1138,12 @@ export const modelFamilies: ModelFamily[] = [
             options: ["16:9", "1:1", "9:16"],
             default: "16:9",
             required: false,
+            showFor: [
+              "kling-v2.1-master",
+              "kling-v2",
+              "kling-v1.6-pro",
+              "kling-v1.6-standard",
+            ],
           },
           {
             name: "negative_prompt",
