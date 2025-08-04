@@ -80,17 +80,6 @@ const klingStandardValidationBase = {
   negative_prompt: z.string().optional(),
 };
 
-const veoValidationBase = {
-  model: z.literal("veo-2"),
-  prompt: z.string().min(1),
-  duration: z
-    .union([z.literal(5), z.literal(6), z.literal(7), z.literal(8)])
-    .optional()
-    .default(5),
-  image: z.string().url(),
-  aspect_ratio: z.enum(["16:9", "9:16"]).optional().default("16:9"),
-};
-
 const fluxKontextMaxValidation = z.object({
   model: z.literal("flux-kontext-max"),
   prompt: z.string().min(1),
@@ -180,7 +169,6 @@ export const modelValidations = {
   "kling-v2": z.object(klingV2ValidationBase),
   "kling-v1.6-pro": z.object(klingProValidationBase),
   "kling-v1.6-standard": z.object(klingStandardValidationBase),
-  "veo-2": z.object(veoValidationBase),
   "dall-e-3": z.object({
     ...baseValidation,
     model: z.literal("dall-e-3"),
@@ -1236,7 +1224,6 @@ export const modelFamilies: ModelFamily[] = [
             type: "file",
             label: "Input Image",
             required: false,
-            showFor: ["veo-2"],
           },
           {
             name: "duration",
@@ -1257,17 +1244,26 @@ export const modelFamilies: ModelFamily[] = [
             showFor: ["veo-2"],
           },
           {
-            name: "enhance_prompt",
-            type: "checkbox",
-            label: "Enhance Prompt",
-            default: false,
-            showFor: ["veo-3", "veo-3-fast"],
-          },
-          {
             name: "negative_prompt",
             type: "textarea",
             label: "Negative Prompt",
             showFor: ["veo-3", "veo-3-fast"],
+          },
+          {
+            name: "resolution",
+            type: "select",
+            label: "Resolution",
+            options: ["720p", "1080p"],
+            default: "720p",
+            required: false,
+            showFor: ["veo-3", "veo-3-fast"],
+          },
+          {
+            name: "seed",
+            type: "number",
+            label: "Seed",
+            min: 0,
+            max: 4294967295,
           },
         ],
       },
