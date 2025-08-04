@@ -80,6 +80,36 @@ const klingStandardValidationBase = {
   negative_prompt: z.string().optional(),
 };
 
+const fluxKreaDevValidation = z.object({
+  model: z.literal("flux-krea-dev"),
+  prompt: z.string().min(1),
+  aspect_ratio: z
+    .enum([
+      "1:1",
+      "16:9",
+      "21:9",
+      "3:2",
+      "2:3",
+      "4:5",
+      "5:4",
+      "3:4",
+      "4:3",
+      "9:16",
+      "9:21",
+    ])
+    .optional()
+    .default("1:1"),
+  image: z.string().url().optional(),
+  prompt_strength: z.number().min(0).max(1).optional().default(0.8),
+  num_inference_steps: z
+    .number()
+    .min(4, "Number Inference Steps must be at least 4.")
+    .max(50, "Number Inference Steps must be at most 50.")
+    .optional()
+    .default(28),
+  guidance: z.number().min(0).max(10).optional().default(4.5),
+});
+
 const fluxKontextMaxValidation = z.object({
   model: z.literal("flux-kontext-max"),
   prompt: z.string().min(1),
@@ -130,6 +160,36 @@ const fluxKontextProValidation = z.object({
     .default("match_input_image"),
 });
 
+const fluxKontextDevValidation = z.object({
+  model: z.literal("flux-kontext-dev"),
+  prompt: z.string().min(1),
+  input_image: z.string().url(),
+  aspect_ratio: z
+    .enum([
+      "1:1",
+      "16:9",
+      "21:9",
+      "3:2",
+      "2:3",
+      "4:5",
+      "5:4",
+      "3:4",
+      "4:3",
+      "9:16",
+      "9:21",
+      "match_input_image",
+    ])
+    .optional()
+    .default("match_input_image"),
+  num_inference_steps: z
+    .number()
+    .min(4, "Number Inference Steps must be at least 4.")
+    .max(50, "Number Inference Steps must be at most 50.")
+    .optional()
+    .default(28),
+  guidance: z.number().min(0).max(10).optional().default(2.5),
+});
+
 const fluxUltraValidation = z.object({
   model: z.literal("flux-1.1-pro-ultra"),
   prompt: z.string().min(1),
@@ -160,8 +220,10 @@ const fluxUltraValidation = z.object({
 });
 
 export const modelValidations = {
+  "flux-krea-dev": fluxKreaDevValidation,
   "flux-kontext-max": fluxKontextMaxValidation,
   "flux-kontext-pro": fluxKontextProValidation,
+  "flux-kontext-dev": fluxKontextDevValidation,
   "flux-1.1-pro-ultra": fluxUltraValidation,
   "kling-v2.1-master": z.object(klingV21MasterValidationBase),
   "kling-v2.1-pro": z.object(klingV21ProValidationBase),
@@ -172,13 +234,6 @@ export const modelValidations = {
   "dall-e-3": z.object({
     ...baseValidation,
     model: z.literal("dall-e-3"),
-    size: z.enum(["1024x1024", "1792x1024", "1024x1792"]),
-    quality: z.enum(["standard", "hd"]).optional(),
-    style: z.enum(["vivid", "natural"]).optional(),
-  }),
-  "azure/dall-e-3": z.object({
-    ...baseValidation,
-    model: z.literal("azure/dall-e-3"),
     size: z.enum(["1024x1024", "1792x1024", "1024x1792"]),
     quality: z.enum(["standard", "hd"]).optional(),
     style: z.enum(["vivid", "natural"]).optional(),
@@ -363,7 +418,7 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Model Version",
             required: true,
-            options: ["gpt-image-1", "azure/dall-e-3", "dall-e-3", "dall-e-2"],
+            options: ["gpt-image-1", "dall-e-3", "dall-e-2"],
             default: "gpt-image-1",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
@@ -372,7 +427,7 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Size",
             options: ["1024x1024", "1792x1024", "1024x1792"],
-            showFor: ["azure/dall-e-3", "dall-e-3"],
+            showFor: ["dall-e-3"],
             default: "1024x1024",
           },
           {
@@ -380,7 +435,7 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Quality",
             options: ["standard", "hd"],
-            showFor: ["azure/dall-e-3", "dall-e-3"],
+            showFor: ["dall-e-3"],
             default: "standard",
           },
           {
@@ -388,7 +443,7 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Style",
             options: ["vivid", "natural", "none"],
-            showFor: ["azure/dall-e-3", "dall-e-3"],
+            showFor: ["dall-e-3"],
             default: "vivid",
           },
           {
@@ -513,8 +568,10 @@ export const modelFamilies: ModelFamily[] = [
             label: "Model Version",
             required: true,
             options: [
+              "flux-krea-dev",
               "flux-kontext-max",
               "flux-kontext-pro",
+              "flux-kontext-dev",
               "flux-1.1-pro-ultra",
               "flux-1.1-pro",
               "flux-pro",
@@ -522,7 +579,7 @@ export const modelFamilies: ModelFamily[] = [
               "flux-schnell",
               "flux-pro-canny",
             ],
-            default: "flux-kontext-max",
+            default: "flux-krea-dev",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
           {
@@ -655,6 +712,99 @@ export const modelFamilies: ModelFamily[] = [
             showFor: ["flux-pro-canny"],
             default: false,
           },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: [
+              "1:1",
+              "16:9",
+              "21:9",
+              "3:2",
+              "2:3",
+              "4:5",
+              "5:4",
+              "3:4",
+              "4:3",
+              "9:16",
+              "9:21",
+            ],
+            default: "1:1",
+            showFor: ["flux-krea-dev"],
+          },
+          {
+            name: "input_image",
+            type: "file",
+            label: "Input Image",
+            required: true,
+            showFor: ["flux-kontext-dev"],
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: [
+              "1:1",
+              "16:9",
+              "21:9",
+              "3:2",
+              "2:3",
+              "4:5",
+              "5:4",
+              "3:4",
+              "4:3",
+              "9:16",
+              "9:21",
+              "match_input_image",
+            ],
+            default: "match_input_image",
+            showFor: ["flux-kontext-dev"],
+          },
+          {
+            name: "image",
+            type: "file",
+            label: "Image",
+            showFor: ["flux-krea-dev"],
+          },
+          {
+            name: "prompt_strength",
+            type: "range",
+            label: "Prompt Strength",
+            showFor: ["flux-krea-dev"],
+            min: 0,
+            max: 1,
+            step: 0.01,
+            default: 0.8,
+          },
+          {
+            name: "num_inference_steps",
+            type: "range",
+            label: "Number Inference Steps",
+            showFor: ["flux-krea-dev", "flux-kontext-dev"],
+            min: 1,
+            max: 50,
+            default: 28,
+          },
+          {
+            name: "guidance",
+            type: "range",
+            label: "Guidance",
+            showFor: ["flux-krea-dev"],
+            min: 0,
+            max: 10,
+            step: 0.01,
+            default: 4.5,
+          },
+          {
+            name: "guidance",
+            type: "range",
+            label: "Guidance",
+            showFor: ["flux-kontext-dev"],
+            min: 0,
+            max: 10,
+            step: 0.01,
+            default: 2.5,
+          },
         ],
       },
     ],
@@ -675,10 +825,17 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Model Version",
             required: true,
-            options: ["seedream-3"],
-            default: "seedream-3",
+            options: ["seededit-3", "seedream-3"],
+            default: "seededit-3",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
+          {
+            name: "image",
+            type: "file",
+            label: "Image",
+            required: true,
+            showFor: ["seededit-3"],
+          },
           {
             name: "aspect_ratio",
             type: "select",
@@ -694,6 +851,7 @@ export const modelFamilies: ModelFamily[] = [
               "21:9",
             ],
             default: "16:9",
+            showFor: ["seedream-3"],
           },
           {
             name: "size",
@@ -701,6 +859,7 @@ export const modelFamilies: ModelFamily[] = [
             label: "Size",
             options: ["small", "regular", "big"],
             default: "regular",
+            showFor: ["seedream-3"],
           },
           {
             name: "guidance_scale",
