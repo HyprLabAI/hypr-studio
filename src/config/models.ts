@@ -810,15 +810,15 @@ export const modelFamilies: ModelFamily[] = [
     ],
   },
   {
-    id: "seedream",
+    id: "bytedance",
     name: "ByteDance",
     description: "ByteDance image generation models",
     type: "image",
     models: [
       {
-        id: "seedream-3",
-        name: "Seedream",
-        description: "Seedream models",
+        id: "bytedance",
+        name: "ByteDance",
+        description: "ByteDance models",
         fields: [
           {
             name: "model",
@@ -869,6 +869,60 @@ export const modelFamilies: ModelFamily[] = [
             max: 10,
             step: 0.01,
             default: 2.5,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "qwen",
+    name: "Qwen",
+    description: "Qwen image generation models",
+    type: "image",
+    models: [
+      {
+        id: "qwen",
+        name: "Qwen",
+        description: "Qwen models",
+        fields: [
+          {
+            name: "model",
+            type: "select",
+            label: "Model Version",
+            required: true,
+            options: ["qwen-image"],
+            default: "qwen-image",
+          },
+          { name: "prompt", type: "textarea", label: "Prompt", required: true },
+          {
+            name: "enhance_prompt",
+            type: "checkbox",
+            label: "Enhance Prompt",
+            default: false,
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: ["1:1", "16:9", "9:16", "4:3", "3:4"],
+            default: "16:9",
+          },
+          {
+            name: "num_inference_steps",
+            type: "range",
+            label: "Number Inference Steps",
+            min: 1,
+            max: 50,
+            default: 50,
+          },
+          {
+            name: "guidance",
+            type: "range",
+            label: "Guidance",
+            min: 0,
+            max: 10,
+            step: 0.01,
+            default: 4,
           },
         ],
       },
