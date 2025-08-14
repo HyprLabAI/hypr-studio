@@ -195,19 +195,7 @@ const fluxUltraValidation = z.object({
   prompt: z.string().min(1),
   image_prompt: z.string().url().optional(),
   aspect_ratio: z
-    .enum([
-      "21:9",
-      "16:9",
-      "3:2",
-      "4:3",
-      "5:4",
-      "1:1",
-      "4:5",
-      "3:4",
-      "2:3",
-      "9:16",
-      "9:21",
-    ])
+    .enum(["21:9", "16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16", "9:21"])
     .optional()
     .default("1:1"),
   image_prompt_strength: z
@@ -618,13 +606,7 @@ export const modelFamilies: ModelFamily[] = [
             min: 1,
             max: 50,
             default: 30,
-            showFor: [
-              "flux-1.1-pro",
-              "flux-pro",
-              "flux-pro-canny",
-              "flux-dev",
-              "flux-schnell",
-            ],
+            showFor: ["flux-pro", "flux-pro-canny", "flux-dev", "flux-schnell"],
           },
           {
             name: "height",
@@ -634,7 +616,7 @@ export const modelFamilies: ModelFamily[] = [
             max: 1440,
             step: 32,
             default: 1024,
-            showFor: ["flux-1.1-pro", "flux-pro", "flux-dev", "flux-schnell"],
+            showFor: ["flux-pro", "flux-dev", "flux-schnell"],
           },
           {
             name: "width",
@@ -644,7 +626,7 @@ export const modelFamilies: ModelFamily[] = [
             max: 1440,
             step: 32,
             default: 1024,
-            showFor: ["flux-1.1-pro", "flux-pro", "flux-dev", "flux-schnell"],
+            showFor: ["flux-pro", "flux-dev", "flux-schnell"],
           },
           {
             name: "aspect_ratio",
@@ -655,9 +637,7 @@ export const modelFamilies: ModelFamily[] = [
               "16:9",
               "3:2",
               "4:3",
-              "5:4",
               "1:1",
-              "4:5",
               "3:4",
               "2:3",
               "9:16",
@@ -665,6 +645,14 @@ export const modelFamilies: ModelFamily[] = [
             ],
             default: "1:1",
             showFor: ["flux-1.1-pro-ultra"],
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: ["1:1", "16:9", "9:16", "4:3", "3:4"],
+            default: "1:1",
+            showFor: ["flux-1.1-pro"],
           },
           {
             name: "aspect_ratio",
