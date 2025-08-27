@@ -306,6 +306,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 acc[key] = value;
               }
             } else if (
+              key === "image_input" &&
+              currentModelId === "nano-banana"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
               (currentModelId === "dall-e-3" ||
                 currentModelId === "azure/dall-e-3") &&
               key === "style" &&
@@ -379,6 +391,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                   firstValidationError = `${field.label} is required. Please upload at least one file.`;
                   break;
                 }
+              } else if (
+                field.name === "image_input" &&
+                currentModelId === "nano-banana" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
               } else if (!formValues[field.name]) {
                 firstValidationError = `${field.label} is required. Please upload a file.`;
                 break;
@@ -428,6 +452,13 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 .union([z.string().url(), z.array(z.string().url()).min(1)])
                 .optional(),
               mask: z.string().url().optional(),
+            });
+          }
+          else if (requestBody.model === "nano-banana") {
+            finalSchema = baseModelSchema.extend({
+              image_input: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
             });
           } else if (
             modelConfigBlock?.fields.some(

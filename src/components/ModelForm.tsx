@@ -181,7 +181,9 @@ const ModelForm: React.FC<ModelFormProps> = ({
             ? "video"
             : "image";
         const allowMultiple =
-          field.name === "image" && currentSpecificModel === "gpt-image-1";
+          (field.name === "image" && currentSpecificModel === "gpt-image-1") ||
+          (field.name === "image_input" &&
+            currentSpecificModel === "nano-banana");
         const uploadError = values[`${field.name}_error`];
 
         return (

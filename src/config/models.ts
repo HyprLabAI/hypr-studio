@@ -208,6 +208,19 @@ const fluxUltraValidation = z.object({
 });
 
 export const modelValidations = {
+  "nano-banana": z.object({
+    ...baseValidation,
+    model: z.literal("nano-banana"),
+    image_input: z
+      .union([
+        z.string().url("Image must be a valid URL."),
+        z
+          .array(z.string().url("Each image in the array must be a valid URL."))
+          .min(1, "At least one image URL is required in the array.")
+          .max(6),
+      ])
+      .optional(),
+  }),
   "flux-krea-dev": fluxKreaDevValidation,
   "flux-kontext-max": fluxKontextMaxValidation,
   "flux-kontext-pro": fluxKontextProValidation,
@@ -519,20 +532,27 @@ export const modelFamilies: ModelFamily[] = [
             label: "Model Version",
             required: true,
             options: [
+              "nano-banana",
               "imagen-4-ultra",
               "imagen-4",
               "imagen-4-fast",
-              "imagen-3",
-              "imagen-3-fast",
             ],
-            default: "imagen-4-ultra",
+            default: "nano-banana",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
+          {
+            name: "image_input",
+            type: "file",
+            label: "Image Input",
+            showFor: ["nano-banana"],
+            required: false,
+          },
           {
             name: "aspect_ratio",
             type: "select",
             label: "Aspect Ratio",
             options: ["1:1", "3:4", "4:3", "9:16", "16:9"],
+            showFor: ["imagen-4-ultra", "imagen-4", "imagen-4-fast"],
             default: "1:1",
           },
         ],
