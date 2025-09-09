@@ -1472,7 +1472,6 @@ export const modelFamilies: ModelFamily[] = [
             options: ["16:9", "9:16"],
             default: "16:9",
             required: false,
-            showFor: ["veo-2"],
           },
           {
             name: "negative_prompt",
