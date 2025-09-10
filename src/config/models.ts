@@ -208,6 +208,34 @@ const fluxUltraValidation = z.object({
 });
 
 export const modelValidations = {
+  "seedream-4": z.object({
+    ...baseValidation,
+    model: z.literal("seedream-4"),
+    image_input: z
+      .union([
+        z.string().url("Image must be a valid URL."),
+        z
+          .array(z.string().url("Each image in the array must be a valid URL."))
+          .min(1, "At least one image URL is required in the array.")
+          .max(10),
+      ])
+      .optional(),
+    size: z.enum(["1K", "2K", "4K"]).optional().default("2K"),
+    aspect_ratio: z
+      .enum([
+        "match_input_image",
+        "1:1",
+        "4:3",
+        "3:4",
+        "16:9",
+        "9:16",
+        "3:2",
+        "2:3",
+        "21:9",
+      ])
+      .optional()
+      .default("1:1"),
+  }),
   "nano-banana": z.object({
     ...baseValidation,
     model: z.literal("nano-banana"),
@@ -833,8 +861,8 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Model Version",
             required: true,
-            options: ["seededit-3", "seedream-3"],
-            default: "seededit-3",
+            options: ["seedream-4", "seededit-3", "seedream-3", "dreamina-3.1"],
+            default: "seedream-4",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
           {
@@ -877,6 +905,81 @@ export const modelFamilies: ModelFamily[] = [
             max: 10,
             step: 0.01,
             default: 2.5,
+            showFor: ["seededit-3", "seedream-3"],
+          },
+          {
+            name: "image_input",
+            type: "file",
+            label: "Image Input",
+            required: false,
+            showFor: ["seedream-4"],
+          },
+          {
+            name: "size",
+            type: "select",
+            label: "Size",
+            options: ["1K", "2K", "4K"],
+            default: "2K",
+            showFor: ["seedream-4"],
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: [
+              "match_input_image",
+              "1:1",
+              "4:3",
+              "3:4",
+              "16:9",
+              "9:16",
+              "3:2",
+              "2:3",
+              "21:9",
+            ],
+            default: "1:1",
+            showFor: ["seedream-4"],
+          },
+          {
+            name: "enhance_prompt",
+            type: "checkbox",
+            label: "Enhance Prompt",
+            default: false,
+            showFor: ["dreamina-3.1"],
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: [
+              "1:1",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3",
+              "16:9",
+              "9:16",
+              "21:9",
+              "9:21",
+            ],
+            default: "1:1",
+            showFor: ["dreamina-3.1"],
+          },
+          {
+            name: "resolution",
+            type: "select",
+            label: "Resolution",
+            options: ["1K", "2K"],
+            default: "2K",
+            showFor: ["dreamina-3.1"],
+          },
+          {
+            name: "seed",
+            type: "number",
+            label: "Seed",
+            min: 0,
+            max: 4294967295,
+            showFor: ["dreamina-3.1"],
           },
         ],
       },
