@@ -911,7 +911,6 @@ export const modelFamilies: ModelFamily[] = [
             name: "image_input",
             type: "file",
             label: "Image Input",
-            required: false,
             showFor: ["seedream-4"],
           },
           {
