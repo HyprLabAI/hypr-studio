@@ -306,6 +306,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 acc[key] = value;
               }
             } else if (
+              key === "image" &&
+              currentModelId === "gpt-image-1-mini"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
               key === "image_input" &&
               currentModelId === "nano-banana"
             ) {
@@ -404,6 +416,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                   break;
                 }
               } else if (
+                field.name === "image" &&
+                currentModelId === "gpt-image-1-mini" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
                 field.name === "image_input" &&
                 currentModelId === "nano-banana" &&
                 Array.isArray(formValues[field.name])
@@ -471,6 +495,13 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
         if (baseModelSchema) {
           let finalSchema = baseModelSchema;
           if (requestBody.model === "gpt-image-1") {
+            finalSchema = baseModelSchema.extend({
+              image: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+              mask: z.string().url().optional(),
+            });
+          } else if (requestBody.model === "gpt-image-1-mini") {
             finalSchema = baseModelSchema.extend({
               image: z
                 .union([z.string().url(), z.array(z.string().url()).min(1)])

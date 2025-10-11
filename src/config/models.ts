@@ -248,6 +248,22 @@ export const modelValidations = {
           .max(6),
       ])
       .optional(),
+    aspect_ratio: z
+      .enum([
+        "match_input_image",
+        "1:1",
+        "9:16",
+        "16:9",
+        "3:4",
+        "4:3",
+        "3:2",
+        "2:3",
+        "5:4",
+        "4:5",
+        "21:9",
+      ])
+      .optional()
+      .default("1:1"),
   }),
   "flux-krea-dev": fluxKreaDevValidation,
   "flux-kontext-max": fluxKontextMaxValidation,
@@ -290,7 +306,32 @@ export const modelValidations = {
       .optional()
       .default("auto"),
     moderation: z.enum(["auto", "low"]).optional().default("auto"),
-    output_compression: z.number().min(0).max(100).optional().default(80),
+    output_compression: z.number().min(0).max(100).optional().default(100),
+    quality: z.enum(["low", "medium", "high"]).optional().default("medium"),
+    size: z
+      .enum(["1024x1024", "1024x1536", "1536x1024"])
+      .optional()
+      .default("1024x1024"),
+  }),
+  "gpt-image-1-mini": z.object({
+    ...baseValidation,
+    model: z.literal("gpt-image-1-mini"),
+    image: z
+      .union([
+        z.string().url("Image must be a valid URL."),
+        z
+          .array(z.string().url("Each image in the array must be a valid URL."))
+          .min(1, "At least one image URL is required in the array.")
+          .max(4),
+      ])
+      .optional(),
+    mask: z.string().url().optional(),
+    background: z
+      .enum(["auto", "transparent", "opaque"])
+      .optional()
+      .default("auto"),
+    moderation: z.enum(["auto", "low"]).optional().default("auto"),
+    output_compression: z.number().min(0).max(100).optional().default(100),
     quality: z.enum(["low", "medium", "high"]).optional().default("medium"),
     size: z
       .enum(["1024x1024", "1024x1536", "1536x1024"])
@@ -447,7 +488,12 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Model Version",
             required: true,
-            options: ["gpt-image-1", "dall-e-3", "dall-e-2"],
+            options: [
+              "gpt-image-1",
+              "gpt-image-1-mini",
+              "dall-e-3",
+              "dall-e-2",
+            ],
             default: "gpt-image-1",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
@@ -487,14 +533,14 @@ export const modelFamilies: ModelFamily[] = [
             name: "image",
             type: "file",
             label: "Image Input",
-            showFor: ["gpt-image-1"],
+            showFor: ["gpt-image-1", "gpt-image-1-mini"],
             required: false,
           },
           {
             name: "mask",
             type: "file",
             label: "Mask Input",
-            showFor: ["gpt-image-1"],
+            showFor: ["gpt-image-1", "gpt-image-1-mini"],
             required: false,
           },
           {
@@ -502,7 +548,7 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Background",
             options: ["auto", "transparent", "opaque"],
-            showFor: ["gpt-image-1"],
+            showFor: ["gpt-image-1", "gpt-image-1-mini"],
             default: "auto",
           },
           {
@@ -510,7 +556,7 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Moderation",
             options: ["auto", "low"],
-            showFor: ["gpt-image-1"],
+            showFor: ["gpt-image-1", "gpt-image-1-mini"],
             default: "auto",
           },
           {
@@ -520,15 +566,15 @@ export const modelFamilies: ModelFamily[] = [
             min: 0,
             max: 100,
             step: 1,
-            showFor: ["gpt-image-1"],
-            default: 80,
+            showFor: ["gpt-image-1", "gpt-image-1-mini"],
+            default: 100,
           },
           {
             name: "quality",
             type: "select",
             label: "Quality",
             options: ["low", "medium", "high"],
-            showFor: ["gpt-image-1"],
+            showFor: ["gpt-image-1", "gpt-image-1-mini"],
             default: "medium",
           },
           {
@@ -536,7 +582,7 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Size",
             options: ["1024x1024", "1024x1536", "1536x1024"],
-            showFor: ["gpt-image-1"],
+            showFor: ["gpt-image-1", "gpt-image-1-mini"],
             default: "1024x1024",
           },
         ],
@@ -581,6 +627,26 @@ export const modelFamilies: ModelFamily[] = [
             label: "Aspect Ratio",
             options: ["1:1", "3:4", "4:3", "9:16", "16:9"],
             showFor: ["imagen-4-ultra", "imagen-4", "imagen-4-fast"],
+            default: "1:1",
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: [
+              "match_input_image",
+              "1:1",
+              "9:16",
+              "16:9",
+              "3:4",
+              "4:3",
+              "3:2",
+              "2:3",
+              "5:4",
+              "4:5",
+              "21:9",
+            ],
+            showFor: ["nano-banana"],
             default: "1:1",
           },
         ],
@@ -1451,6 +1517,130 @@ export const modelFamilies: ModelFamily[] = [
     ],
   },
   {
+    id: "openai-video",
+    name: "OpenAI",
+    description: "OpenAI video generation models",
+    type: "video",
+    models: [
+      {
+        id: "sora",
+        name: "Sora",
+        description: "OpenAI Sora Model",
+        fields: [
+          {
+            name: "model",
+            type: "select",
+            label: "Model Version",
+            required: true,
+            options: ["sora-2-pro", "sora-2"],
+            default: "sora-2-pro",
+          },
+          { name: "prompt", type: "textarea", label: "Prompt", required: true },
+          {
+            name: "input_reference",
+            type: "file",
+            label: "Input Reference",
+            required: false,
+          },
+          {
+            name: "seconds",
+            type: "select",
+            label: "Seconds",
+            options: [4, 8, 12],
+            default: 4,
+            required: false,
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: ["portrait", "landscape"],
+            default: "landscape",
+            required: false,
+          },
+          {
+            name: "resolution",
+            type: "select",
+            label: "Resolution",
+            options: ["standard", "high"],
+            default: "standard",
+            required: false,
+            showFor: ["sora-2-pro"],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "google-video",
+    name: "Google",
+    description: "Google video generation models",
+    type: "video",
+    models: [
+      {
+        id: "veo",
+        name: "Veo",
+        description: "Google Veo Model",
+        fields: [
+          {
+            name: "model",
+            type: "select",
+            label: "Model Version",
+            required: true,
+            options: ["veo-3", "veo-3-fast", "veo-2"],
+            default: "veo-3",
+          },
+          { name: "prompt", type: "textarea", label: "Prompt", required: true },
+          {
+            name: "image",
+            type: "file",
+            label: "Input Image",
+            required: false,
+          },
+          {
+            name: "duration",
+            type: "select",
+            label: "Duration (seconds)",
+            options: [5, 6, 7, 8],
+            default: 5,
+            required: false,
+            showFor: ["veo-2"],
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: ["16:9", "9:16"],
+            default: "16:9",
+            required: false,
+          },
+          {
+            name: "negative_prompt",
+            type: "textarea",
+            label: "Negative Prompt",
+            showFor: ["veo-3", "veo-3-fast"],
+          },
+          {
+            name: "resolution",
+            type: "select",
+            label: "Resolution",
+            options: ["720p", "1080p"],
+            default: "720p",
+            required: false,
+            showFor: ["veo-3", "veo-3-fast"],
+          },
+          {
+            name: "seed",
+            type: "number",
+            label: "Seed",
+            min: 0,
+            max: 4294967295,
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: "kling",
     name: "Kling",
     description: "Kling video generation models",
@@ -1528,75 +1718,6 @@ export const modelFamilies: ModelFamily[] = [
             type: "textarea",
             label: "Negative Prompt",
             required: false,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "google-video",
-    name: "Google",
-    description: "Google video generation models",
-    type: "video",
-    models: [
-      {
-        id: "veo",
-        name: "Veo",
-        description: "Google Veo Model",
-        fields: [
-          {
-            name: "model",
-            type: "select",
-            label: "Model Version",
-            required: true,
-            options: ["veo-3", "veo-3-fast", "veo-2"],
-            default: "veo-3",
-          },
-          { name: "prompt", type: "textarea", label: "Prompt", required: true },
-          {
-            name: "image",
-            type: "file",
-            label: "Input Image",
-            required: false,
-          },
-          {
-            name: "duration",
-            type: "select",
-            label: "Duration (seconds)",
-            options: [5, 6, 7, 8],
-            default: 5,
-            required: false,
-            showFor: ["veo-2"],
-          },
-          {
-            name: "aspect_ratio",
-            type: "select",
-            label: "Aspect Ratio",
-            options: ["16:9", "9:16"],
-            default: "16:9",
-            required: false,
-          },
-          {
-            name: "negative_prompt",
-            type: "textarea",
-            label: "Negative Prompt",
-            showFor: ["veo-3", "veo-3-fast"],
-          },
-          {
-            name: "resolution",
-            type: "select",
-            label: "Resolution",
-            options: ["720p", "1080p"],
-            default: "720p",
-            required: false,
-            showFor: ["veo-3", "veo-3-fast"],
-          },
-          {
-            name: "seed",
-            type: "number",
-            label: "Seed",
-            min: 0,
-            max: 4294967295,
           },
         ],
       },
