@@ -24,10 +24,8 @@ const findDefaultVideoModel = (): string => {
       return modelSelectField.options[0] as string;
     if (firstModelConfig?.id && !modelSelectField) return firstModelConfig.id;
   }
-  console.warn(
-    "No default video model found. Falling back to 'kling-v1.6-standard'.",
-  );
-  return "kling-v1.6-standard";
+  console.warn("No default video model found. Falling back to 'sora-2-pro'.");
+  return "sora-2-pro";
 };
 const defaultVideoModel = findDefaultVideoModel();
 
@@ -182,6 +180,7 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
           delete settingsWithoutFiles.start_image;
           delete settingsWithoutFiles.end_image;
           delete settingsWithoutFiles.image;
+          delete settingsWithoutFiles.input_reference;
 
           setSelectedModel(settings.model);
           setFormValues({ ...settingsWithoutFiles, model: settings.model });
@@ -415,17 +414,26 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
             value !== null &&
             value !== ""
           ) {
-            if (key === "duration" && typeof value === "string") {
+            if (
+              (key === "duration" || key === "seconds") &&
+              typeof value === "string"
+            ) {
               acc[key] = parseInt(value, 10);
             } else if (
               (key === "start_image" ||
                 key === "end_image" ||
-                key === "image") &&
+                key === "image" ||
+                key === "input_reference") &&
               typeof value === "string"
             ) {
               acc[key] = value;
             } else if (
-              !(key === "start_image" || key === "end_image" || key === "image")
+              !(
+                key === "start_image" ||
+                key === "end_image" ||
+                key === "image" ||
+                key === "input_reference"
+              )
             ) {
               acc[key] = value;
             }
@@ -481,10 +489,6 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
 
           let isFieldActuallyRequired = field.required;
 
-          if (currentModelId === "kling-v2" && field.name === "start_image") {
-            isFieldActuallyRequired = false;
-          }
-
           if (isApplicableToCurrentModel && isFieldActuallyRequired) {
             if (field.type === "file") {
               if (!formValues[field.name]) {
@@ -533,6 +537,7 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
             start_image: z.string().url().optional(),
             end_image: z.string().url().optional(),
             image: z.string().url().optional(),
+            input_reference: z.string().url().optional(),
           });
           videoValidationSchema.parse(requestBody);
           console.log(
