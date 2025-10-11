@@ -1546,8 +1546,8 @@ export const modelFamilies: ModelFamily[] = [
             name: "seconds",
             type: "select",
             label: "Seconds",
-            options: [8, 12],
-            default: 8,
+            options: [4, 8, 12],
+            default: 4,
             required: false,
           },
           {
