@@ -207,6 +207,22 @@ const fluxUltraValidation = z.object({
   raw: z.boolean().optional().default(false),
 });
 
+const soraValidationBase = {
+  prompt: z.string().min(1),
+  input_reference: z.string().url().optional(),
+  seconds: z.union([z.literal(4), z.literal(8), z.literal(12)]).optional(),
+  aspect_ratio: z.enum(["portrait", "landscape"]).optional(),
+};
+
+const veoValidationBase = {
+  prompt: z.string().min(1),
+  image: z.string().url().optional(),
+  aspect_ratio: z.enum(["16:9", "9:16"]).optional(),
+  negative_prompt: z.string().optional(),
+  resolution: z.enum(["720p", "1080p"]).optional(),
+  seed: z.number().min(0).max(4294967295).optional(),
+};
+
 export const modelValidations = {
   "seedream-4": z.object({
     ...baseValidation,
@@ -276,6 +292,42 @@ export const modelValidations = {
   "kling-v2": z.object(klingV2ValidationBase),
   "kling-v1.6-pro": z.object(klingProValidationBase),
   "kling-v1.6-standard": z.object(klingStandardValidationBase),
+  "sora-2-pro": z.object({
+    ...soraValidationBase,
+    model: z.literal("sora-2-pro"),
+    resolution: z.enum(["standard", "high"]).optional(),
+  }),
+  "sora-2": z.object({
+    ...soraValidationBase,
+    model: z.literal("sora-2"),
+  }),
+  "veo-3.1": z.object({
+    ...veoValidationBase,
+    model: z.literal("veo-3.1"),
+    reference_images: z
+      .union([
+        z.string().url("Image must be a valid URL."),
+        z
+          .array(z.string().url("Each image in the array must be a valid URL."))
+          .min(1, "At least one image URL is required in the array.")
+          .max(3),
+      ])
+      .optional(),
+    last_frame: z.string().url().optional(),
+  }),
+  "veo-3.1-fast": z.object({
+    ...veoValidationBase,
+    model: z.literal("veo-3.1-fast"),
+    last_frame: z.string().url().optional(),
+  }),
+  "veo-3": z.object({
+    ...veoValidationBase,
+    model: z.literal("veo-3"),
+  }),
+  "veo-3-fast": z.object({
+    ...veoValidationBase,
+    model: z.literal("veo-3-fast"),
+  }),
   "dall-e-3": z.object({
     ...baseValidation,
     model: z.literal("dall-e-3"),
@@ -1587,24 +1639,29 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Model Version",
             required: true,
-            options: ["veo-3", "veo-3-fast", "veo-2"],
-            default: "veo-3",
+            options: ["veo-3.1", "veo-3.1-fast", "veo-3", "veo-3-fast"],
+            default: "veo-3.1",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
           {
             name: "image",
             type: "file",
-            label: "Input Image",
+            label: "Image",
             required: false,
           },
           {
-            name: "duration",
-            type: "select",
-            label: "Duration (seconds)",
-            options: [5, 6, 7, 8],
-            default: 5,
+            name: "last_frame",
+            type: "file",
+            label: "Last Frame",
             required: false,
-            showFor: ["veo-2"],
+            showFor: ["veo-3.1", "veo-3.1-fast"],
+          },
+          {
+            name: "reference_images",
+            type: "file",
+            label: "Reference Images",
+            required: false,
+            showFor: ["veo-3.1"],
           },
           {
             name: "aspect_ratio",
@@ -1618,7 +1675,6 @@ export const modelFamilies: ModelFamily[] = [
             name: "negative_prompt",
             type: "textarea",
             label: "Negative Prompt",
-            showFor: ["veo-3", "veo-3-fast"],
           },
           {
             name: "resolution",
@@ -1627,7 +1683,6 @@ export const modelFamilies: ModelFamily[] = [
             options: ["720p", "1080p"],
             default: "720p",
             required: false,
-            showFor: ["veo-3", "veo-3-fast"],
           },
           {
             name: "seed",

@@ -181,6 +181,8 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
           delete settingsWithoutFiles.end_image;
           delete settingsWithoutFiles.image;
           delete settingsWithoutFiles.input_reference;
+          delete settingsWithoutFiles.reference_images;
+          delete settingsWithoutFiles.last_frame;
 
           setSelectedModel(settings.model);
           setFormValues({ ...settingsWithoutFiles, model: settings.model });
@@ -409,34 +411,30 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
       const filteredValues = Object.entries(values).reduce(
         (acc, [key, value]) => {
           if (
-            applicableFieldNames.has(key) &&
-            value !== undefined &&
-            value !== null &&
-            value !== ""
+            !applicableFieldNames.has(key) ||
+            value === undefined ||
+            value === null ||
+            value === ""
           ) {
+            return acc;
+          }
+
+          if (key === "reference_images" && currentModelId === "veo-3.1") {
             if (
-              (key === "duration" || key === "seconds") &&
-              typeof value === "string"
-            ) {
-              acc[key] = parseInt(value, 10);
-            } else if (
-              (key === "start_image" ||
-                key === "end_image" ||
-                key === "image" ||
-                key === "input_reference") &&
-              typeof value === "string"
-            ) {
-              acc[key] = value;
-            } else if (
-              !(
-                key === "start_image" ||
-                key === "end_image" ||
-                key === "image" ||
-                key === "input_reference"
-              )
+              (typeof value === "string" && value) ||
+              (Array.isArray(value) &&
+                value.length > 0 &&
+                value.every((v) => typeof v === "string" && v))
             ) {
               acc[key] = value;
             }
+          } else if (
+            (key === "duration" || key === "seconds") &&
+            typeof value === "string"
+          ) {
+            acc[key] = parseInt(value, 10);
+          } else {
+            acc[key] = value;
           }
           return acc;
         },
@@ -491,7 +489,19 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
 
           if (isApplicableToCurrentModel && isFieldActuallyRequired) {
             if (field.type === "file") {
-              if (!formValues[field.name]) {
+              if (
+                field.name === "reference_images" &&
+                currentModelId === "veo-3.1" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (!formValues[field.name]) {
                 firstValidationError = `${field.label} is required. Please upload a file.`;
                 break;
               }
@@ -533,13 +543,7 @@ const VideoGenerator = forwardRef<VideoGeneratorRef, VideoGeneratorProps>(
 
         const modelSchema = modelValidations[requestBody.model];
         if (modelSchema) {
-          const videoValidationSchema = modelSchema.extend({
-            start_image: z.string().url().optional(),
-            end_image: z.string().url().optional(),
-            image: z.string().url().optional(),
-            input_reference: z.string().url().optional(),
-          });
-          videoValidationSchema.parse(requestBody);
+          modelSchema.parse(requestBody);
           console.log(
             `Validation successful for video model ${requestBody.model}.`,
           );
