@@ -319,6 +319,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
               }
             } else if (
               key === "image_input" &&
+              currentModelId === "nano-banana-pro"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
+              key === "image_input" &&
               currentModelId === "nano-banana"
             ) {
               if (
@@ -429,6 +441,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 }
               } else if (
                 field.name === "image_input" &&
+                currentModelId === "nano-banana-pro" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "image_input" &&
                 currentModelId === "nano-banana" &&
                 Array.isArray(formValues[field.name])
               ) {
@@ -507,6 +531,12 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 .union([z.string().url(), z.array(z.string().url()).min(1)])
                 .optional(),
               mask: z.string().url().optional(),
+            });
+          } else if (requestBody.model === "nano-banana-pro") {
+            finalSchema = baseModelSchema.extend({
+              image_input: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
             });
           } else if (requestBody.model === "nano-banana") {
             finalSchema = baseModelSchema.extend({

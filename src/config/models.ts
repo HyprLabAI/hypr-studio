@@ -252,6 +252,36 @@ export const modelValidations = {
       .optional()
       .default("1:1"),
   }),
+  "nano-banana-pro": z.object({
+    ...baseValidation,
+    model: z.literal("nano-banana-pro"),
+    image_input: z
+      .union([
+        z.string().url("Image must be a valid URL."),
+        z
+          .array(z.string().url("Each image in the array must be a valid URL."))
+          .min(1, "At least one image URL is required in the array.")
+          .max(14),
+      ])
+      .optional(),
+    aspect_ratio: z
+      .enum([
+        "match_input_image",
+        "1:1",
+        "9:16",
+        "16:9",
+        "3:4",
+        "4:3",
+        "3:2",
+        "2:3",
+        "5:4",
+        "4:5",
+        "21:9",
+      ])
+      .optional()
+      .default("1:1"),
+    resolution: z.enum(["1K", "2K", "4K"]).optional().default("2K"),
+  }),
   "nano-banana": z.object({
     ...baseValidation,
     model: z.literal("nano-banana"),
@@ -642,15 +672,15 @@ export const modelFamilies: ModelFamily[] = [
     ],
   },
   {
-    id: "imagen",
+    id: "google",
     name: "Google",
-    description: "Google image generation models",
+    description: "Google Image models",
     type: "image",
     models: [
       {
-        id: "imagen",
-        name: "Imagen",
-        description: "Imagen models",
+        id: "google",
+        name: "Google",
+        description: "Google Image models",
         fields: [
           {
             name: "model",
@@ -658,19 +688,20 @@ export const modelFamilies: ModelFamily[] = [
             label: "Model Version",
             required: true,
             options: [
+              "nano-banana-pro",
               "nano-banana",
               "imagen-4-ultra",
               "imagen-4",
               "imagen-4-fast",
             ],
-            default: "nano-banana",
+            default: "nano-banana-pro",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
           {
             name: "image_input",
             type: "file",
             label: "Image Input",
-            showFor: ["nano-banana"],
+            showFor: ["nano-banana-pro", "nano-banana"],
             required: false,
           },
           {
@@ -698,8 +729,16 @@ export const modelFamilies: ModelFamily[] = [
               "4:5",
               "21:9",
             ],
-            showFor: ["nano-banana"],
+            showFor: ["nano-banana-pro", "nano-banana"],
             default: "1:1",
+          },
+          {
+            name: "resolution",
+            type: "select",
+            label: "Resolution",
+            options: ["1K", "2K", "4K"],
+            default: "2K",
+            showFor: ["nano-banana-pro"],
           },
         ],
       },
