@@ -224,6 +224,79 @@ const veoValidationBase = {
 };
 
 export const modelValidations = {
+  "flux-2-pro": z.object({
+    ...baseValidation,
+    model: z.literal("flux-2-pro"),
+    input_images: z
+      .union([
+        z.string().url("Image must be a valid URL."),
+        z
+          .array(z.string().url("Each image in the array must be a valid URL."))
+          .min(1, "At least one image URL is required in the array.")
+          .max(8),
+      ])
+      .optional(),
+    aspect_ratio: z
+      .enum([
+        "match_input_image",
+        "1:1",
+        "16:9",
+        "3:2",
+        "2:3",
+        "4:5",
+        "5:4",
+        "9:16",
+        "3:4",
+        "4:3",
+      ])
+      .optional()
+      .default("1:1"),
+    resolution: z
+      .enum(["match_input_image", "0.5 MP", "1 MP", "2 MP", "4 MP"])
+      .optional()
+      .default("match_input_image"),
+    seed: z.number().min(0).max(4294967295).optional(),
+  }),
+  "flux-2-flex": z.object({
+    ...baseValidation,
+    model: z.literal("flux-2-flex"),
+    input_images: z
+      .union([
+        z.string().url("Image must be a valid URL."),
+        z
+          .array(z.string().url("Each image in the array must be a valid URL."))
+          .min(1, "At least one image URL is required in the array.")
+          .max(10),
+      ])
+      .optional(),
+    aspect_ratio: z
+      .enum([
+        "match_input_image",
+        "1:1",
+        "16:9",
+        "3:2",
+        "2:3",
+        "4:5",
+        "5:4",
+        "9:16",
+        "3:4",
+        "4:3",
+      ])
+      .optional()
+      .default("1:1"),
+    resolution: z
+      .enum(["match_input_image", "0.5 MP", "1 MP", "2 MP", "4 MP"])
+      .optional()
+      .default("match_input_image"),
+    steps: z
+      .number()
+      .min(1, "Number Inference Steps must be at least 1.")
+      .max(50, "Number Inference Steps must be at most 50.")
+      .optional()
+      .default(30),
+    guidance: z.number().min(1.5).max(10).optional().default(4.5),
+    seed: z.number().min(0).max(4294967295).optional(),
+  }),
   "seedream-4": z.object({
     ...baseValidation,
     model: z.literal("seedream-4"),
@@ -761,6 +834,8 @@ export const modelFamilies: ModelFamily[] = [
             label: "Model Version",
             required: true,
             options: [
+              "flux-2-pro",
+              "flux-2-flex",
               "flux-krea-dev",
               "flux-kontext-max",
               "flux-kontext-pro",
@@ -772,9 +847,42 @@ export const modelFamilies: ModelFamily[] = [
               "flux-schnell",
               "flux-pro-canny",
             ],
-            default: "flux-krea-dev",
+            default: "flux-2-pro",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
+          {
+            name: "input_images",
+            type: "file",
+            label: "Input Images",
+            showFor: ["flux-2-pro", "flux-2-flex"],
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: [
+              "match_input_image",
+              "1:1",
+              "16:9",
+              "3:2",
+              "2:3",
+              "4:5",
+              "5:4",
+              "9:16",
+              "3:4",
+              "4:3",
+            ],
+            default: "match_input_image",
+            showFor: ["flux-2-pro", "flux-2-flex"],
+          },
+          {
+            name: "resolution",
+            type: "select",
+            label: "Resolution",
+            options: ["match_input_image", "0.5 MP", "1 MP", "2 MP", "4 MP"],
+            default: "match_input_image",
+            showFor: ["flux-2-pro", "flux-2-flex"],
+          },
           {
             name: "input_image",
             type: "file",
@@ -811,7 +919,23 @@ export const modelFamilies: ModelFamily[] = [
             min: 1,
             max: 50,
             default: 30,
-            showFor: ["flux-pro", "flux-pro-canny", "flux-dev", "flux-schnell"],
+            showFor: [
+              "flux-2-flex",
+              "flux-pro",
+              "flux-pro-canny",
+              "flux-dev",
+              "flux-schnell",
+            ],
+          },
+          {
+            name: "guidance",
+            type: "range",
+            label: "Guidance",
+            showFor: ["flux-2-flex"],
+            min: 1.5,
+            max: 10,
+            step: 0.01,
+            default: 4.5,
           },
           {
             name: "height",
@@ -997,6 +1121,14 @@ export const modelFamilies: ModelFamily[] = [
             max: 10,
             step: 0.01,
             default: 2.5,
+          },
+          {
+            name: "seed",
+            type: "number",
+            label: "Seed",
+            min: 0,
+            max: 4294967295,
+            showFor: ["flux-2-pro", "flux-2-flex"],
           },
         ],
       },

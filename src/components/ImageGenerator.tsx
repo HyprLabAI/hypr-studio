@@ -318,6 +318,30 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 acc[key] = value;
               }
             } else if (
+              key === "input_images" &&
+              currentModelId === "flux-2-pro"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
+              key === "input_images" &&
+              currentModelId === "flux-2-flex"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
               key === "image_input" &&
               currentModelId === "nano-banana-pro"
             ) {
@@ -440,6 +464,30 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                   break;
                 }
               } else if (
+                field.name === "input_images" &&
+                currentModelId === "flux-2-pro" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "input_images" &&
+                currentModelId === "flux-2-flex" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
                 field.name === "image_input" &&
                 currentModelId === "nano-banana-pro" &&
                 Array.isArray(formValues[field.name])
@@ -531,6 +579,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 .union([z.string().url(), z.array(z.string().url()).min(1)])
                 .optional(),
               mask: z.string().url().optional(),
+            });
+          } else if (requestBody.model === "flux-2-pro") {
+            finalSchema = baseModelSchema.extend({
+              input_images: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+            });
+          } else if (requestBody.model === "flux-2-flex") {
+            finalSchema = baseModelSchema.extend({
+              input_images: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
             });
           } else if (requestBody.model === "nano-banana-pro") {
             finalSchema = baseModelSchema.extend({

@@ -184,6 +184,10 @@ const ModelForm: React.FC<ModelFormProps> = ({
           (field.name === "image" && currentSpecificModel === "gpt-image-1") ||
           (field.name === "image" &&
             currentSpecificModel === "gpt-image-1-mini") ||
+          (field.name === "input_images" &&
+            currentSpecificModel === "flux-2-pro") ||
+          (field.name === "input_images" &&
+            currentSpecificModel === "flux-2-flex") ||
           (field.name === "image_input" &&
             currentSpecificModel === "nano-banana-pro") ||
           (field.name === "image_input" &&
