@@ -1179,7 +1179,7 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
   }),
 
   // ============================================================================
-  // --- LumaLabs Models ---
+  // --- Luma Labs Models ---
   // ============================================================================
 
   photon: z.object({
@@ -2589,15 +2589,15 @@ export const modelFamilies: ModelFamily[] = [
     ],
   },
   {
-    id: "lumalabs",
-    name: "LumaLabs",
-    description: "LumaLabs Image models",
+    id: "luma-labs",
+    name: "Luma Labs",
+    description: "Luma Labs Image models",
     type: "image",
     models: [
       {
-        id: "lumalabs",
-        name: "LumaLabs",
-        description: "LumaLabs Image models",
+        id: "luma-labs",
+        name: "Luma Labs",
+        description: "Luma Labs Image models",
         fields: [
           {
             name: "model",
