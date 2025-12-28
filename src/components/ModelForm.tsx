@@ -181,19 +181,35 @@ const ModelForm: React.FC<ModelFormProps> = ({
             ? "video"
             : "image";
         const allowMultiple =
+          (field.name === "image" &&
+            currentSpecificModel === "chatgpt-image-latest") ||
+          (field.name === "image" &&
+            currentSpecificModel === "gpt-image-1.5") ||
           (field.name === "image" && currentSpecificModel === "gpt-image-1") ||
           (field.name === "image" &&
             currentSpecificModel === "gpt-image-1-mini") ||
           (field.name === "input_images" &&
+            currentSpecificModel === "flux-2-max") ||
+          (field.name === "input_images" &&
             currentSpecificModel === "flux-2-pro") ||
           (field.name === "input_images" &&
             currentSpecificModel === "flux-2-flex") ||
+          (field.name === "input_images" &&
+            currentSpecificModel === "flux-2-dev") ||
           (field.name === "image_input" &&
             currentSpecificModel === "nano-banana-pro") ||
           (field.name === "image_input" &&
             currentSpecificModel === "nano-banana") ||
           (field.name === "image_input" &&
+            currentSpecificModel === "seedream-4.5") ||
+          (field.name === "image_input" &&
             currentSpecificModel === "seedream-4") ||
+          (field.name === "image" &&
+            currentSpecificModel === "qwen-image-edit-2511") ||
+          (field.name === "image" &&
+            currentSpecificModel === "qwen-image-edit-plus") ||
+          (field.name === "images" &&
+            currentSpecificModel === "p-image-edit") ||
           (field.name === "reference_images" &&
             currentSpecificModel === "veo-3.1");
         const uploadError = values[`${field.name}_error`];

@@ -28,8 +28,10 @@ const findDefaultImageModel = (): string => {
       return modelSelectField.options[0] as string;
     if (firstModelConfig?.id && !modelSelectField) return firstModelConfig.id;
   }
-  console.warn("No default image model found. Falling back to 'gpt-image-1'.");
-  return "gpt-image-1";
+  console.warn(
+    "No default image model found. Falling back to 'chatgpt-image-latest'.",
+  );
+  return "chatgpt-image-latest";
 };
 const defaultImageModel = findDefaultImageModel();
 
@@ -296,7 +298,25 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
             value !== null &&
             value !== ""
           ) {
-            if (key === "image" && currentModelId === "gpt-image-1") {
+            if (key === "image" && currentModelId === "chatgpt-image-latest") {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (key === "image" && currentModelId === "gpt-image-1.5") {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (key === "image" && currentModelId === "gpt-image-1") {
               if (
                 (typeof value === "string" && value) ||
                 (Array.isArray(value) &&
@@ -308,6 +328,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
             } else if (
               key === "image" &&
               currentModelId === "gpt-image-1-mini"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
+              key === "input_images" &&
+              currentModelId === "flux-2-max"
             ) {
               if (
                 (typeof value === "string" && value) ||
@@ -332,6 +364,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
             } else if (
               key === "input_images" &&
               currentModelId === "flux-2-flex"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
+              key === "input_images" &&
+              currentModelId === "flux-2-dev"
             ) {
               if (
                 (typeof value === "string" && value) ||
@@ -367,8 +411,53 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
               }
             } else if (
               key === "image_input" &&
+              currentModelId === "seedream-4.5"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
+              key === "image_input" &&
               currentModelId === "seedream-4"
             ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
+              key === "image" &&
+              currentModelId === "qwen-image-edit-2511"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
+              key === "image" &&
+              currentModelId === "qwen-image-edit-plus"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (key === "images" && currentModelId === "p-image-edit") {
               if (
                 (typeof value === "string" && value) ||
                 (Array.isArray(value) &&
@@ -441,6 +530,30 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
             if (field.type === "file") {
               if (
                 field.name === "image" &&
+                currentModelId === "chatgpt-image-latest" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "image" &&
+                currentModelId === "gpt-image-1.5" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "image" &&
                 currentModelId === "gpt-image-1" &&
                 Array.isArray(formValues[field.name])
               ) {
@@ -465,6 +578,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 }
               } else if (
                 field.name === "input_images" &&
+                currentModelId === "flux-2-max" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "input_images" &&
                 currentModelId === "flux-2-pro" &&
                 Array.isArray(formValues[field.name])
               ) {
@@ -478,6 +603,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
               } else if (
                 field.name === "input_images" &&
                 currentModelId === "flux-2-flex" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "input_images" &&
+                currentModelId === "flux-2-dev" &&
                 Array.isArray(formValues[field.name])
               ) {
                 if (
@@ -513,7 +650,55 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 }
               } else if (
                 field.name === "image_input" &&
+                currentModelId === "seedream-4.5" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "image_input" &&
                 currentModelId === "seedream-4" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "image" &&
+                currentModelId === "qwen-image-edit-2511" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "image" &&
+                currentModelId === "qwen-image-edit-plus" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "images" &&
+                currentModelId === "p-image-edit" &&
                 Array.isArray(formValues[field.name])
               ) {
                 if (
@@ -566,7 +751,21 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
         const baseModelSchema = modelValidations[requestBody.model];
         if (baseModelSchema) {
           let finalSchema = baseModelSchema;
-          if (requestBody.model === "gpt-image-1") {
+          if (requestBody.model === "chatgpt-image-latest") {
+            finalSchema = baseModelSchema.extend({
+              image: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+              mask: z.string().url().optional(),
+            });
+          } else if (requestBody.model === "gpt-image-1.5") {
+            finalSchema = baseModelSchema.extend({
+              image: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+              mask: z.string().url().optional(),
+            });
+          } else if (requestBody.model === "gpt-image-1") {
             finalSchema = baseModelSchema.extend({
               image: z
                 .union([z.string().url(), z.array(z.string().url()).min(1)])
@@ -580,6 +779,12 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 .optional(),
               mask: z.string().url().optional(),
             });
+          } else if (requestBody.model === "flux-2-max") {
+            finalSchema = baseModelSchema.extend({
+              input_images: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+            });
           } else if (requestBody.model === "flux-2-pro") {
             finalSchema = baseModelSchema.extend({
               input_images: z
@@ -587,6 +792,12 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 .optional(),
             });
           } else if (requestBody.model === "flux-2-flex") {
+            finalSchema = baseModelSchema.extend({
+              input_images: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+            });
+          } else if (requestBody.model === "flux-2-dev") {
             finalSchema = baseModelSchema.extend({
               input_images: z
                 .union([z.string().url(), z.array(z.string().url()).min(1)])
@@ -604,9 +815,33 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 .union([z.string().url(), z.array(z.string().url()).min(1)])
                 .optional(),
             });
+          } else if (requestBody.model === "seedream-4.5") {
+            finalSchema = baseModelSchema.extend({
+              image_input: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+            });
           } else if (requestBody.model === "seedream-4") {
             finalSchema = baseModelSchema.extend({
               image_input: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+            });
+          } else if (requestBody.model === "qwen-image-edit-2511") {
+            finalSchema = baseModelSchema.extend({
+              image: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+            });
+          } else if (requestBody.model === "qwen-image-edit-plus") {
+            finalSchema = baseModelSchema.extend({
+              image: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+            });
+          } else if (requestBody.model === "p-image-edit") {
+            finalSchema = baseModelSchema.extend({
+              images: z
                 .union([z.string().url(), z.array(z.string().url()).min(1)])
                 .optional(),
             });
