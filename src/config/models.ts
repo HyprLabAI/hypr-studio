@@ -262,15 +262,6 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
       .default("1:1"),
   }),
 
-  "flux-pro-canny": z.object({
-    model: z.literal("flux-pro-canny"),
-    prompt: z.string().min(1),
-    control_image: z.string().url("Control image is required"),
-    steps: z.number().min(1).max(50).optional().default(30),
-    guidance: z.number().min(1).max(100).optional().default(55),
-    prompt_upsampling: z.boolean().optional().default(false),
-  }),
-
   // ============================================================================
   // --- Kling Models ---
   // ============================================================================
@@ -1665,7 +1656,6 @@ export const modelFamilies: ModelFamily[] = [
               "flux-kontext-dev",
               "flux-1.1-pro-ultra",
               "flux-1.1-pro",
-              "flux-pro-canny",
             ],
             default: "flux-2-max",
           },
@@ -1710,13 +1700,6 @@ export const modelFamilies: ModelFamily[] = [
             showFor: ["flux-kontext-max", "flux-kontext-pro"],
           },
           {
-            name: "control_image",
-            type: "file",
-            label: "Control Image",
-            showFor: ["flux-pro-canny"],
-            required: true,
-          },
-          {
             name: "image_prompt",
             type: "file",
             label: "Image Prompt",
@@ -1739,7 +1722,7 @@ export const modelFamilies: ModelFamily[] = [
             min: 1,
             max: 50,
             default: 30,
-            showFor: ["flux-2-flex", "flux-pro-canny"],
+            showFor: ["flux-2-flex"],
           },
           {
             name: "guidance",
@@ -1806,22 +1789,6 @@ export const modelFamilies: ModelFamily[] = [
             label: "Raw Output",
             default: false,
             showFor: ["flux-1.1-pro-ultra"],
-          },
-          {
-            name: "guidance",
-            type: "range",
-            label: "Guidance",
-            showFor: ["flux-pro-canny"],
-            min: 1,
-            max: 100,
-            default: 55,
-          },
-          {
-            name: "prompt_upsampling",
-            type: "checkbox",
-            label: "Prompt Upsampling",
-            showFor: ["flux-pro-canny"],
-            default: false,
           },
           {
             name: "aspect_ratio",
