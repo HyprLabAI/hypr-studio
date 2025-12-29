@@ -45,7 +45,7 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
     resolution: z
       .enum(["match_input_image", "0.5 MP", "1 MP", "2 MP", "4 MP"])
       .optional()
-      .default("match_input_image"),
+      .default("1 MP"),
     seed: z.number().min(0).max(4294967295).optional(),
   }),
 
@@ -76,7 +76,7 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
     resolution: z
       .enum(["match_input_image", "0.5 MP", "1 MP", "2 MP", "4 MP"])
       .optional()
-      .default("match_input_image"),
+      .default("1 MP"),
     seed: z.number().min(0).max(4294967295).optional(),
   }),
 
@@ -107,7 +107,7 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
     resolution: z
       .enum(["match_input_image", "0.5 MP", "1 MP", "2 MP", "4 MP"])
       .optional()
-      .default("match_input_image"),
+      .default("1 MP"),
     steps: z.number().min(1).max(50).optional().default(30),
     guidance: z.number().min(1.5).max(10).optional().default(4.5),
     seed: z.number().min(0).max(4294967295).optional(),
@@ -137,10 +137,6 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
       ])
       .optional()
       .default("1:1"),
-    resolution: z
-      .enum(["match_input_image", "0.5 MP", "1 MP", "2 MP", "4 MP"])
-      .optional()
-      .default("match_input_image"),
     seed: z.number().min(0).max(4294967295).optional(),
   }),
 
@@ -1696,7 +1692,7 @@ export const modelFamilies: ModelFamily[] = [
               "3:4",
               "4:3",
             ],
-            default: "match_input_image",
+            default: "1:1",
             showFor: ["flux-2-max", "flux-2-pro", "flux-2-flex", "flux-2-dev"],
           },
           {
@@ -1704,8 +1700,8 @@ export const modelFamilies: ModelFamily[] = [
             type: "select",
             label: "Resolution",
             options: ["match_input_image", "0.5 MP", "1 MP", "2 MP", "4 MP"],
-            default: "match_input_image",
-            showFor: ["flux-2-max", "flux-2-pro", "flux-2-flex", "flux-2-dev"],
+            default: "1 MP",
+            showFor: ["flux-2-max", "flux-2-pro", "flux-2-flex"],
           },
           {
             name: "input_image",
