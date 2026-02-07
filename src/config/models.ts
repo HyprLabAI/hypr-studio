@@ -266,6 +266,20 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
   // --- Kling Models ---
   // ============================================================================
 
+  "kling-v2.6": z.object({
+    model: z.literal("kling-v2.6"),
+    prompt: z.string().min(1),
+    duration: z
+      .union([z.literal(5), z.literal(10)])
+      .optional()
+      .default(5),
+    start_image: z.string().url().optional(),
+    end_image: z.string().url().optional(),
+    aspect_ratio: z.enum(["16:9", "1:1", "9:16"]).optional().default("16:9"),
+    negative_prompt: z.string().optional(),
+    generate_audio: z.boolean().optional().default(false),
+  }),
+
   "kling-v2.5-turbo-pro": z.object({
     model: z.literal("kling-v2.5-turbo-pro"),
     prompt: z.string().min(1),
@@ -274,6 +288,7 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
       .optional()
       .default(5),
     start_image: z.string().url().optional(),
+    end_image: z.string().url().optional(),
     aspect_ratio: z.enum(["16:9", "1:1", "9:16"]).optional().default("16:9"),
     negative_prompt: z.string().optional(),
   }),
@@ -297,7 +312,8 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
       .union([z.literal(5), z.literal(10)])
       .optional()
       .default(5),
-    start_image: z.string().url().optional(),
+    start_image: z.string().url(),
+    end_image: z.string().url().optional(),
     negative_prompt: z.string().optional(),
   }),
 
@@ -308,7 +324,7 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
       .union([z.literal(5), z.literal(10)])
       .optional()
       .default(5),
-    start_image: z.string().url().optional(),
+    start_image: z.string().url(),
     negative_prompt: z.string().optional(),
   }),
 
@@ -333,7 +349,7 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
       .optional()
       .default(5),
     cfg_scale: z.number().min(0).max(1).optional().default(0.5),
-    start_image: z.string().url().optional(),
+    start_image: z.string().url(),
     end_image: z.string().url().optional(),
     aspect_ratio: z.enum(["16:9", "1:1", "9:16"]).optional().default("16:9"),
     negative_prompt: z.string().optional(),
@@ -348,7 +364,6 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
       .default(5),
     cfg_scale: z.number().min(0).max(1).optional().default(0.5),
     start_image: z.string().url().optional(),
-    end_image: z.string().url().optional(),
     aspect_ratio: z.enum(["16:9", "1:1", "9:16"]).optional().default("16:9"),
     negative_prompt: z.string().optional(),
   }),
@@ -1199,14 +1214,57 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
   // --- x.AI Models ---
   // ============================================================================
 
+  "grok-imagine-image": z.object({
+    ...baseValidation,
+    model: z.literal("grok-imagine-image"),
+    image: z.string().url().optional(),
+    aspect_ratio: z
+      .enum([
+        "1:1",
+        "3:4",
+        "4:3",
+        "9:16",
+        "16:9",
+        "2:3",
+        "3:2",
+        "9:19.5",
+        "19.5:9",
+        "9:20",
+        "20:9",
+        "1:2",
+        "2:1",
+        "auto",
+      ])
+      .default("16:9"),
+  }),
+
   "grok-2-image": z.object({
     ...baseValidation,
     model: z.literal("grok-2-image"),
   }),
 
+  "grok-imagine-video": z.object({
+    model: z.literal("grok-imagine-video"),
+    prompt: z.string().min(1),
+    image: z.string().url().optional(),
+    video: z.string().url().optional(),
+    duration: z.number().min(1).max(15).optional().default(6),
+    aspect_ratio: z
+      .enum(["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"])
+      .default("16:9"),
+    resolution: z.enum(["480p", "720p"]).optional().default("720p"),
+  }),
+
   // ============================================================================
   // --- Alibaba Models ---
   // ============================================================================
+
+  "qwen-image-max": z.object({
+    ...baseValidation,
+    model: z.literal("qwen-image-max"),
+    image: z.union([z.string().url(), z.array(z.string().url()).min(1).max(3)]),
+    aspect_ratio: z.enum(["1:1", "16:9", "9:16", "4:3", "3:4"]).default("16:9"),
+  }),
 
   "qwen-image-edit-2511": z.object({
     ...baseValidation,
@@ -1227,6 +1285,14 @@ export const modelValidations: Record<string, z.ZodSchema<any>> = {
     model: z.literal("qwen-image-edit"),
     image: z.string().url("Image is required"),
     aspect_ratio: z.enum(["1:1", "16:9", "9:16", "4:3", "3:4"]).default("16:9"),
+  }),
+
+  "qwen-image-2512": z.object({
+    ...baseValidation,
+    model: z.literal("qwen-image-2512"),
+    aspect_ratio: z.enum(["1:1", "16:9", "9:16", "4:3", "3:4"]).default("16:9"),
+    num_inference_steps: z.number().min(1).max(50).optional().default(50),
+    guidance: z.number().min(0).max(10).optional().default(4),
   }),
 
   "qwen-image": z.object({
@@ -1624,6 +1690,60 @@ export const modelFamilies: ModelFamily[] = [
             options: ["1K", "2K", "4K"],
             default: "2K",
             showFor: ["nano-banana-pro"],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "xai-image",
+    name: "x.AI",
+    description: "x.AI Image models",
+    type: "image",
+    models: [
+      {
+        id: "xai-image",
+        name: "x.AI",
+        description: "x.AI Image models",
+        fields: [
+          {
+            name: "model",
+            type: "select",
+            label: "Model Version",
+            required: true,
+            options: ["grok-imagine-image", "grok-2-image"],
+            default: "grok-imagine-image",
+          },
+          { name: "prompt", type: "textarea", label: "Prompt", required: true },
+          {
+            name: "image",
+            type: "file",
+            label: "Image",
+            required: false,
+            showFor: ["grok-imagine-image"],
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: [
+              "1:1",
+              "3:4",
+              "4:3",
+              "9:16",
+              "16:9",
+              "2:3",
+              "3:2",
+              "9:19.5",
+              "19.5:9",
+              "9:20",
+              "20:9",
+              "1:2",
+              "2:1",
+              "auto",
+            ],
+            default: "1:1",
+            showFor: ["grok-imagine-image"],
           },
         ],
       },
@@ -2066,12 +2186,14 @@ export const modelFamilies: ModelFamily[] = [
             label: "Model Version",
             required: true,
             options: [
+              "qwen-image-max",
               "qwen-image-edit-2511",
               "qwen-image-edit-plus",
               "qwen-image-edit",
+              "qwen-image-2512",
               "qwen-image",
             ],
-            default: "qwen-image-edit-2511",
+            default: "qwen-image-max",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
           {
@@ -2080,6 +2202,7 @@ export const modelFamilies: ModelFamily[] = [
             label: "Image",
             required: true,
             showFor: [
+              "qwen-image-max",
               "qwen-image-edit-2511",
               "qwen-image-edit-plus",
               "qwen-image-edit",
@@ -2106,7 +2229,7 @@ export const modelFamilies: ModelFamily[] = [
             min: 1,
             max: 50,
             default: 50,
-            showFor: ["qwen-image"],
+            showFor: ["qwen-image-2512", "qwen-image"],
           },
           {
             name: "guidance",
@@ -2116,7 +2239,7 @@ export const modelFamilies: ModelFamily[] = [
             max: 10,
             step: 0.01,
             default: 4,
-            showFor: ["qwen-image"],
+            showFor: ["qwen-image-2512", "qwen-image"],
           },
         ],
       },
@@ -2616,30 +2739,6 @@ export const modelFamilies: ModelFamily[] = [
     ],
   },
   {
-    id: "xai",
-    name: "x.AI",
-    description: "x.AI Image models",
-    type: "image",
-    models: [
-      {
-        id: "xai",
-        name: "x.AI",
-        description: "x.AI Image models",
-        fields: [
-          {
-            name: "model",
-            type: "select",
-            label: "Model Version",
-            required: true,
-            options: ["grok-2-image"],
-            default: "grok-2-image",
-          },
-          { name: "prompt", type: "textarea", label: "Prompt", required: true },
-        ],
-      },
-    ],
-  },
-  {
     id: "openai-video",
     name: "OpenAI",
     description: "OpenAI Video models",
@@ -2767,6 +2866,67 @@ export const modelFamilies: ModelFamily[] = [
     ],
   },
   {
+    id: "xai-video",
+    name: "x.AI",
+    description: "x.AI Video models",
+    type: "video",
+    models: [
+      {
+        id: "xai-video",
+        name: "x.AI",
+        description: "x.AI Video models",
+        fields: [
+          {
+            name: "model",
+            type: "select",
+            label: "Model Version",
+            required: true,
+            options: ["grok-imagine-video"],
+            default: "grok-imagine-video",
+          },
+          { name: "prompt", type: "textarea", label: "Prompt", required: true },
+          {
+            name: "image",
+            type: "file",
+            label: "Image",
+            required: false,
+          },
+          {
+            name: "video",
+            type: "file",
+            label: "Video",
+            required: false,
+          },
+          {
+            name: "duration",
+            type: "range",
+            label: "Duration",
+            min: 1,
+            max: 15,
+            step: 1,
+            default: 6,
+          },
+          {
+            name: "aspect_ratio",
+            type: "select",
+            label: "Aspect Ratio",
+            options: ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"],
+            default: "16:9",
+            required: false,
+          },
+          {
+            name: "resolution",
+            type: "select",
+            label: "Resolution",
+            options: ["480p", "720p"],
+            default: "720p",
+            required: false,
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: "kling-video",
     name: "Kling",
     description: "Kling Video models",
@@ -2783,6 +2943,7 @@ export const modelFamilies: ModelFamily[] = [
             label: "Model Version",
             required: true,
             options: [
+              "kling-v2.6",
               "kling-v2.5-turbo-pro",
               "kling-v2.1-master",
               "kling-v2.1-pro",
@@ -2791,7 +2952,7 @@ export const modelFamilies: ModelFamily[] = [
               "kling-v1.6-pro",
               "kling-v1.6-standard",
             ],
-            default: "kling-v2.5-turbo-pro",
+            default: "kling-v2.6",
           },
           { name: "prompt", type: "textarea", label: "Prompt", required: true },
           {
@@ -2799,13 +2960,42 @@ export const modelFamilies: ModelFamily[] = [
             type: "file",
             label: "Start Image",
             required: false,
+            showFor: [
+              "kling-v2.6",
+              "kling-v2.5-turbo-pro",
+              "kling-v2.1-master",
+              "kling-v2",
+              "kling-v1.6-standard",
+            ],
+          },
+          {
+            name: "start_image",
+            type: "file",
+            label: "Start Image",
+            required: true,
+            showFor: [
+              "kling-v2.1-pro",
+              "kling-v2.1-standard",
+              "kling-v1.6-pro",
+            ],
           },
           {
             name: "end_image",
             type: "file",
             label: "End Image",
             required: false,
-            showFor: ["kling-v1.6-pro", "kling-v1.6-standard"],
+            showFor: [
+              "kling-v2.5-turbo-pro",
+              "kling-v2.1-pro",
+              "kling-v1.6-pro",
+            ],
+          },
+          {
+            name: "generate_audio",
+            type: "checkbox",
+            label: "Generate Audio",
+            default: false,
+            showFor: ["kling-v2.6"],
           },
           {
             name: "duration",
@@ -2834,6 +3024,7 @@ export const modelFamilies: ModelFamily[] = [
             default: "16:9",
             required: false,
             showFor: [
+              "kling-v2.6",
               "kling-v2.5-turbo-pro",
               "kling-v2.1-master",
               "kling-v2",

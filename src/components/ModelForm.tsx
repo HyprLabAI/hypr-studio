@@ -205,6 +205,8 @@ const ModelForm: React.FC<ModelFormProps> = ({
           (field.name === "image_input" &&
             currentSpecificModel === "seedream-4") ||
           (field.name === "image" &&
+            currentSpecificModel === "qwen-image-max") ||
+          (field.name === "image" &&
             currentSpecificModel === "qwen-image-edit-2511") ||
           (field.name === "image" &&
             currentSpecificModel === "qwen-image-edit-plus") ||

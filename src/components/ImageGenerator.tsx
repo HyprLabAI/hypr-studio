@@ -435,6 +435,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
               }
             } else if (
               key === "image" &&
+              currentModelId === "qwen-image-max"
+            ) {
+              if (
+                (typeof value === "string" && value) ||
+                (Array.isArray(value) &&
+                  value.length > 0 &&
+                  value.every((v) => typeof v === "string" && v))
+              ) {
+                acc[key] = value;
+              }
+            } else if (
+              key === "image" &&
               currentModelId === "qwen-image-edit-2511"
             ) {
               if (
@@ -674,6 +686,18 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
                 }
               } else if (
                 field.name === "image" &&
+                currentModelId === "qwen-image-max" &&
+                Array.isArray(formValues[field.name])
+              ) {
+                if (
+                  !formValues[field.name] ||
+                  formValues[field.name].length === 0
+                ) {
+                  firstValidationError = `${field.label} is required. Please upload at least one file.`;
+                  break;
+                }
+              } else if (
+                field.name === "image" &&
                 currentModelId === "qwen-image-edit-2511" &&
                 Array.isArray(formValues[field.name])
               ) {
@@ -824,6 +848,12 @@ const ImageGenerator = forwardRef<ImageGeneratorRef, ImageGeneratorProps>(
           } else if (requestBody.model === "seedream-4") {
             finalSchema = baseModelSchema.extend({
               image_input: z
+                .union([z.string().url(), z.array(z.string().url()).min(1)])
+                .optional(),
+            });
+          } else if (requestBody.model === "qwen-image-max") {
+            finalSchema = baseModelSchema.extend({
+              image: z
                 .union([z.string().url(), z.array(z.string().url()).min(1)])
                 .optional(),
             });
