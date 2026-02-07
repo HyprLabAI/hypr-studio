@@ -2202,11 +2202,17 @@ export const modelFamilies: ModelFamily[] = [
             label: "Image",
             required: true,
             showFor: [
-              "qwen-image-max",
               "qwen-image-edit-2511",
               "qwen-image-edit-plus",
               "qwen-image-edit",
             ],
+          },
+          {
+            name: "image",
+            type: "file",
+            label: "Image",
+            required: false,
+            showFor: ["qwen-image-max"],
           },
           {
             name: "enhance_prompt",
